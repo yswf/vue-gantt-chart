@@ -74,7 +74,7 @@ export class Task {
   }
 
   setStartDay(day) {
-    if (day < 1 || day > this.endDay) {
+    if (day < 0 || day > this.endDay) {
       if (this.verbose) {
         console.warn(
           this.say(
@@ -189,12 +189,14 @@ export class Task {
     const { startX, startDay, endDay, snapToDays } =
       this.eventsMeta["moveStart"];
 
-    let delta = (event.clientX - startX) / DAY_WIDTH_PX;
-    if (snapToDays && Math.abs(delta) < 1) return;
-    else if (snapToDays) delta = parseInt(delta);
+    const deltaX = event.clientX - startX;
 
-    this.setStartDay(startDay + delta);
-    this.setEndDay(endDay + delta);
+    let days = deltaX / DAY_WIDTH_PX;
+    if (snapToDays && Math.abs(days) < 1) return;
+    else if (snapToDays) days = parseInt(days);
+
+    this.setStartDay(startDay + days);
+    this.setEndDay(endDay + days);
   }
 
   moveEnd() {

@@ -42,15 +42,7 @@
             @mousedown.prevent.stop="taskResize(task, SIDES.left, $event)"
             class="resize-handle left"
           ></div>
-          <div class="task-name" v-text="task.name"></div>
-          <div class="task-dates">
-            <div
-              class="task-date"
-              v-for="date in task.dates"
-              :key="`date-${date}`"
-              v-text="date"
-            ></div>
-          </div>
+          <div class="task-name" v-text="`${task.name}`"></div>
           <div
             @mousedown.prevent.stop="taskResize(task, SIDES.right, $event)"
             class="resize-handle right"
