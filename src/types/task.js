@@ -46,6 +46,10 @@ export class Task {
     return this.start * DAY_WIDTH_PX;
   }
 
+  get top() {
+    return this.y * RESOURCE_HEIGHT_PX;
+  }
+
   setVerbose(verbose) {
     this.verbose = Boolean(verbose);
   }
@@ -103,15 +107,19 @@ export class Task {
     this.end = Number(day);
   }
 
+  setY(y) {
+    this.y = Number(y);
+  }
+
   resizeStart(side, event, options) {
     const set = this.setInteraction(TASK_INTERACTIONS.resize);
     if (!set) return;
 
-    const snapToDays = options?.snapToDays || false;
+    const snapTasksToGrid = options?.snapTasksToGrid || false;
 
     this.eventsMeta["resizeStart"] = {
       side,
-      snapToDays,
+      snapTasksToGrid,
       startX: event.clientX,
       start: this.start,
       end: this.end,
@@ -132,12 +140,12 @@ export class Task {
     )
       return;
 
-    const { startX, start, end, side, snapToDays } =
+    const { startX, start, end, side, snapTasksToGrid } =
       this.eventsMeta["resizeStart"];
 
     let delta = (event.clientX - startX) / DAY_WIDTH_PX;
-    if (snapToDays && Math.abs(delta) < 1) return;
-    else if (snapToDays) delta = parseInt(delta);
+    if (snapTasksToGrid && Math.abs(delta) < 1) return;
+    else if (snapTasksToGrid) delta = parseInt(delta);
 
     if (side === SIDES.left) {
       this.setStart(start + delta);
@@ -149,8 +157,8 @@ export class Task {
   resizeEnd() {
     if (!this.interactionIs(TASK_INTERACTIONS.resize)) return;
 
-    const { snapToDays } = this.eventsMeta["resizeStart"];
-    if (!snapToDays) {
+    const { snapTasksToGrid } = this.eventsMeta["resizeStart"];
+    if (!snapTasksToGrid) {
       this.setStart(Math.round(this.start));
       this.setEnd(Math.round(this.end));
     }
@@ -163,10 +171,10 @@ export class Task {
   moveStart(event, options) {
     this.setInteraction(TASK_INTERACTIONS.move);
 
-    const snapToDays = options?.snapToDays || false;
+    const snapTasksToGrid = options?.snapTasksToGrid || false;
 
     this.eventsMeta["moveStart"] = {
-      snapToDays,
+      snapTasksToGrid,
       startX: event.clientX,
       startY: event.clientY,
       oldStart: this.start,
@@ -189,33 +197,36 @@ export class Task {
     )
       return;
 
-    const { startX, startY, oldStart, oldEnd, oldY, snapToDays } =
+    const { startX, startY, oldStart, oldEnd, oldY, snapTasksToGrid } =
       this.eventsMeta["moveStart"];
 
     const deltaX = event.clientX - startX;
     const deltaY = event.clientY - startY;
 
-    this.y = oldY + deltaY;
-
     let days = deltaX / DAY_WIDTH_PX;
-    if (snapToDays && Math.abs(days) < 1) return;
-    else if (snapToDays) days = parseInt(days);
+    let y = deltaY / RESOURCE_HEIGHT_PX;
+
+    if (snapTasksToGrid) {
+      const daysMovement = Math.abs(days) >= 1;
+      const yMovement = Math.abs(y) >= 1;
+
+      days = daysMovement ? parseInt(days) : 0;
+      y = yMovement ? parseInt(y) : 0;
+    }
 
     this.setStart(oldStart + days);
     this.setEnd(oldEnd + days);
+    this.setY(oldY + y);
   }
 
   moveEnd() {
     if (!this.interactionIs(TASK_INTERACTIONS.move)) return;
 
-    const { snapToDays } = this.eventsMeta["moveStart"];
-    if (!snapToDays) {
+    const { snapTasksToGrid } = this.eventsMeta["moveStart"];
+    if (!snapTasksToGrid) {
       this.setStart(Math.round(this.start));
       this.setEnd(Math.round(this.end));
-    }
-
-    if (this.y % RESOURCE_HEIGHT_PX !== 0) {
-      this.y = Math.round(this.y / RESOURCE_HEIGHT_PX) * RESOURCE_HEIGHT_PX;
+      this.setY(Math.round(this.y));
     }
 
     window.removeEventListener("mousemove", this.methodsReferences["move"]);

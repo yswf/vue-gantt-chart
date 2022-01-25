@@ -41,7 +41,7 @@
           :key="`task-${task.id}`"
           :style="{
             width: `${task.width}px`,
-            transform: `translate(${task.left}px, ${task.y}px)`,
+            transform: `translate(${task.left}px, ${task.top}px)`,
             ...task.style,
           }"
           @mousedown.prevent.stop="taskMove(task, $event)"
@@ -227,6 +227,7 @@ export default {
     height: 40px;
     min-width: 42px;
     background-color: #69abe3;
+    opacity: 0.7;
     cursor: move;
 
     .resize-handle {
