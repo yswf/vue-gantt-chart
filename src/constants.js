@@ -11,3 +11,4 @@ export const TASK_INTERACTIONS = {
 };
 
 export const DAY_WIDTH_PX = 42;
+export const RESOURCE_HEIGHT_PX = 40;

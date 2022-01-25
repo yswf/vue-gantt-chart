@@ -1,14 +1,24 @@
-import { SIDES, TASK_INTERACTIONS, DAY_WIDTH_PX } from "@/constants";
+import {
+  SIDES,
+  TASK_INTERACTIONS,
+  DAY_WIDTH_PX,
+  RESOURCE_HEIGHT_PX,
+} from "@/constants";
+import moment from "moment";
+import { uuidv4 } from "../utils";
 
 export class Task {
   constructor(data) {
-    this.id = data.id;
+    this.id = uuidv4();
     this.name = data.name;
-    this.startDay = Number(data.startDay);
-    this.endDay = Number(data.endDay);
-    this.style = data.style || {};
 
-    this.verbose = data.verbose || false;
+    this.start = Number(data.start) || 0;
+    this.end = Number(data.end) || 1;
+
+    this.x = this.start * DAY_WIDTH_PX;
+    this.y = (Number(data.y) || 0) * RESOURCE_HEIGHT_PX;
+
+    this.style = data.style || {};
 
     //? interaction property is used to determine
     //? if there is any interaction with the task
@@ -18,24 +28,14 @@ export class Task {
     //? otherwise any other interactions will be blocked
     this.interaction = TASK_INTERACTIONS.none;
 
-    //! remove hardcoded date
-    this.daysInJanuary = 31;
-    if (
-      this.startDay < 1 ||
-      this.endDay > this.daysInJanuary ||
-      this.startDay > this.endDay
-    ) {
-      throw new Error(
-        `Task ${this.id} start date is out of bound of the month`
-      );
-    }
-
     this.methodsReferences = {};
     this.eventsMeta = {};
+
+    this.verbose = data.verbose || false;
   }
 
   get duration() {
-    return this.endDay - this.startDay;
+    return this.end - this.start;
   }
 
   get width() {
@@ -43,7 +43,7 @@ export class Task {
   }
 
   get left() {
-    return this.startDay * DAY_WIDTH_PX;
+    return this.start * DAY_WIDTH_PX;
   }
 
   setVerbose(verbose) {
@@ -73,13 +73,13 @@ export class Task {
     return true;
   }
 
-  setStartDay(day) {
-    if (day < 0 || day > this.endDay) {
+  setStart(day) {
+    if (day < 0 || day > this.end) {
       if (this.verbose) {
         console.warn(
           this.say(
             `start day ${day} is out of bound\n`,
-            `start day must be between 1 and ${this.endDay}`
+            `start day must be between 1 and ${this.end}`
           )
         );
       }
@@ -87,11 +87,12 @@ export class Task {
       return;
     }
 
-    this.startDay = Number(day);
+    this.start = Number(day);
   }
 
-  setEndDay(day) {
-    if (day < this.startDay || day > this.daysInJanuary) {
+  setEnd(day) {
+    // moment current month length
+    if (day < this.start || day > moment().daysInMonth()) {
       if (this.verbose) {
         console.warn(this.say(`end day ${day} is out of bound`));
       }
@@ -99,7 +100,7 @@ export class Task {
       return;
     }
 
-    this.endDay = Number(day);
+    this.end = Number(day);
   }
 
   resizeStart(side, event, options) {
@@ -112,8 +113,8 @@ export class Task {
       side,
       snapToDays,
       startX: event.clientX,
-      startDay: this.startDay,
-      endDay: this.endDay,
+      start: this.start,
+      end: this.end,
     };
 
     this.methodsReferences["resize"] = this.resize.bind(this);
@@ -131,7 +132,7 @@ export class Task {
     )
       return;
 
-    const { startX, startDay, endDay, side, snapToDays } =
+    const { startX, start, end, side, snapToDays } =
       this.eventsMeta["resizeStart"];
 
     let delta = (event.clientX - startX) / DAY_WIDTH_PX;
@@ -139,9 +140,9 @@ export class Task {
     else if (snapToDays) delta = parseInt(delta);
 
     if (side === SIDES.left) {
-      this.setStartDay(startDay + delta);
+      this.setStart(start + delta);
     } else if (side === SIDES.right) {
-      this.setEndDay(endDay + delta);
+      this.setEnd(end + delta);
     }
   }
 
@@ -150,8 +151,8 @@ export class Task {
 
     const { snapToDays } = this.eventsMeta["resizeStart"];
     if (!snapToDays) {
-      this.setStartDay(Math.round(this.startDay));
-      this.setEndDay(Math.round(this.endDay));
+      this.setStart(Math.round(this.start));
+      this.setEnd(Math.round(this.end));
     }
 
     window.removeEventListener("mousemove", this.methodsReferences["resize"]);
@@ -167,8 +168,10 @@ export class Task {
     this.eventsMeta["moveStart"] = {
       snapToDays,
       startX: event.clientX,
-      startDay: this.startDay,
-      endDay: this.endDay,
+      startY: event.clientY,
+      oldStart: this.start,
+      oldEnd: this.end,
+      oldY: this.y,
     };
 
     this.methodsReferences["move"] = this.move.bind(this);
@@ -186,17 +189,20 @@ export class Task {
     )
       return;
 
-    const { startX, startDay, endDay, snapToDays } =
+    const { startX, startY, oldStart, oldEnd, oldY, snapToDays } =
       this.eventsMeta["moveStart"];
 
     const deltaX = event.clientX - startX;
+    const deltaY = event.clientY - startY;
+
+    this.y = oldY + deltaY;
 
     let days = deltaX / DAY_WIDTH_PX;
     if (snapToDays && Math.abs(days) < 1) return;
     else if (snapToDays) days = parseInt(days);
 
-    this.setStartDay(startDay + days);
-    this.setEndDay(endDay + days);
+    this.setStart(oldStart + days);
+    this.setEnd(oldEnd + days);
   }
 
   moveEnd() {
@@ -204,8 +210,12 @@ export class Task {
 
     const { snapToDays } = this.eventsMeta["moveStart"];
     if (!snapToDays) {
-      this.setStartDay(Math.round(this.startDay));
-      this.setEndDay(Math.round(this.endDay));
+      this.setStart(Math.round(this.start));
+      this.setEnd(Math.round(this.end));
+    }
+
+    if (this.y % RESOURCE_HEIGHT_PX !== 0) {
+      this.y = Math.round(this.y / RESOURCE_HEIGHT_PX) * RESOURCE_HEIGHT_PX;
     }
 
     window.removeEventListener("mousemove", this.methodsReferences["move"]);
@@ -213,17 +223,17 @@ export class Task {
     this.setInteraction(TASK_INTERACTIONS.none);
   }
 
+  say(...args) {
+    return `Task ${this.id} says: ${args.join(" ")}`;
+  }
+
   toJSON() {
     return {
       id: this.id,
       name: this.name,
-      startDay: this.startDay,
-      endDay: this.endDay,
+      start: this.start,
+      end: this.end,
     };
-  }
-
-  say(...args) {
-    return `Task ${this.id} says: ${args.join(" ")}`;
   }
 
   static fromJSON(data) {
