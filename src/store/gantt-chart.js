@@ -1,47 +1,29 @@
-import { DAY_WIDTH_PX, RESOURCE_HEIGHT_PX } from "@/constants";
+import { GanttChart } from "@/types/gantt-chart";
 
 export const ganttChart = {
   namespaced: true,
   state: {
-    tasks: [],
-    resources: [],
-    settings: {
-      snapTasksToGrid: false,
-
-      verbose: false,
-      dayWidthPx: DAY_WIDTH_PX,
-      resourceHeightPx: RESOURCE_HEIGHT_PX,
-    },
+    ganttChart: new GanttChart(),
   },
   mutations: {
     addTask(state, task) {
-      state.tasks.push(task);
+      state.ganttChart.addTask(task);
     },
 
     removeTask(state, task) {
-      const index = state.tasks.indexOf(task);
-      if (index > -1) {
-        state.tasks.splice(index, 1);
-      }
+      state.ganttChart.removeTask(task);
     },
 
     addResource(state, resource) {
-      state.resources.push(resource);
+      state.ganttChart.addResource(resource);
     },
 
     removeResource(state, resource) {
-      const index = state.resources.indexOf(resource);
-      if (index > -1) {
-        state.resources.splice(index, 1);
-      }
+      state.ganttChart.removeResource(resource);
     },
 
     setSettings(state, settings) {
-      for (const key in settings) {
-        if (Object.prototype.hasOwnProperty.call(state.settings, key)) {
-          state.settings[key] = settings[key];
-        }
-      }
+      state.ganttChart.setSettings(settings);
     },
   },
   actions: {

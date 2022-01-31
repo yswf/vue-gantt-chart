@@ -1,8 +1,8 @@
 <template>
-  <div class="gantt-chart">
+  <div class="gantt-chart" @mousewheel="scale" :style="cssVars">
     <div style="margin-right: 20px; display: flex; flex-direction: column">
       <span>
-        <input type="checkbox" v-model="snapTasksToGrid" id="snap-mode" />
+        <input type="checkbox" v-model="snapToGrid" id="snap-mode" />
         <label for="snap-mode">Snap to days</label>
       </span>
 
@@ -24,14 +24,23 @@
         </button>
       </div>
     </div>
-    <div class="gantt-dates">
-      <div class="month" v-text="currentMonth"></div>
-      <div class="days">
+    <div class="gantt-timeline" :id="timeline.id">
+      <div class="gantt-timeunits-primary">
         <div
-          class="day"
-          v-for="day in currentMonthDays"
-          :key="`day-${day}`"
-          v-text="day"
+          class="gantt-timeunit-primary"
+          :style="{ width: `${unit.width}px`, left: `${unit.left}px` }"
+          v-for="unit in timelineData.primary"
+          :key="unit.name"
+          v-text="unit.name"
+        ></div>
+      </div>
+      <div class="gantt-timeunits-secondary">
+        <div
+          class="gantt-timeunit-secondary"
+          :style="{ width: `${unit.width}px` }"
+          v-for="(unit, index) in timelineData.secondary"
+          :key="`time-unit-${unit.name}-${index}`"
+          v-text="unit.name"
         ></div>
       </div>
       <div class="tasks">
@@ -63,7 +72,7 @@
 
 <script>
 import moment from "moment";
-import { SIDES } from "@/constants";
+import { SIDES, TIME_PERIODS } from "@/constants";
 import { Task } from "@/types/task";
 
 import { mapState, mapActions } from "vuex";
@@ -74,10 +83,34 @@ export default {
 
   computed: {
     ...mapState("ganttChart", {
-      tasks: "tasks",
-      resources: "resources",
-      settings: "settings",
+      ganttChart: "ganttChart",
     }),
+
+    cssVars() {
+      return {
+        "--gantt-time-unit-width": `${this.timeline.TIME_UNIT_WIDTH}px`,
+      };
+    },
+
+    tasks() {
+      return this.ganttChart.tasks;
+    },
+
+    resources() {
+      return this.ganttChart.resources;
+    },
+
+    timeline() {
+      return this.ganttChart.timeline;
+    },
+
+    timelineData() {
+      return this.timeline.getTimePeriod();
+    },
+
+    settings() {
+      return this.ganttChart.settings;
+    },
 
     verbose: {
       get() {
@@ -88,12 +121,12 @@ export default {
       },
     },
 
-    snapTasksToGrid: {
+    snapToGrid: {
       get() {
-        return this.settings.snapTasksToGrid;
+        return this.settings.snapToGrid;
       },
       set(value) {
-        this.setSettings({ snapTasksToGrid: value });
+        this.setSettings({ snapToGrid: value });
       },
     },
   },
@@ -101,16 +134,11 @@ export default {
   data() {
     return {
       SIDES,
+      TIME_PERIODS,
 
       currentMonth: moment().format("MMMM"),
       currentMonthDays: moment().daysInMonth(),
     };
-  },
-
-  watch: {
-    verbose(value) {
-      this.tasks.forEach((task) => task.setVerbose(value));
-    },
   },
 
   mounted() {
@@ -150,26 +178,42 @@ export default {
       addResource: "addResource",
       setSettings: "setSettings",
     }),
+
     taskResize(task, side, event) {
       task.resizeStart(side, event, {
-        snapTasksToGrid: this.snapTasksToGrid,
+        snapToGrid: this.snapToGrid,
       });
     },
 
     taskMove(task, event) {
       task.moveStart(event, {
-        snapTasksToGrid: this.snapTasksToGrid,
+        snapToGrid: this.snapToGrid,
       });
     },
 
     newResource() {
       this.addResource(new Resource({ name: "New resource" }));
     },
+
+    scale(event) {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+
+      const delta = event.deltaY;
+
+      if (delta > 0) {
+        this.timeline.changeTimePeriod(1);
+      } else {
+        this.timeline.changeTimePeriod(-1);
+      }
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+$timeunit-height: 30px;
+
 .gantt-chart {
   display: flex;
   justify-content: center;
@@ -190,24 +234,38 @@ export default {
   }
 }
 
-.gantt-dates {
+.gantt-timeline {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   width: calc(min(100%, 800px));
   overflow: auto;
 
-  .days {
+  .gantt-timeunits-primary {
+    position: relative;
+    height: $timeunit-height;
+    width: 100%;
+
+    .gantt-timeunit-primary {
+      position: absolute;
+      text-align: center;
+      height: 30px;
+    }
+  }
+
+  .gantt-timeunits-secondary {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    height: $timeunit-height;
 
-    .day {
+    .gantt-timeunit-secondary {
       padding: 5px;
-      width: 30px;
+      width: var(--gantt-time-unit-width);
       text-align: center;
       font-size: 0.8rem;
       color: #999;
+      box-sizing: border-box;
 
       border: 1px solid #eee;
     }
