@@ -23,12 +23,12 @@ export const TIME_PERIODS = {
   hours: {
     name: "hours",
     startDate: {
-      unit: "days",
-      term: 1,
+      unit: "hours",
+      term: 2,
     },
     endDate: {
-      unit: "days",
-      term: 1,
+      unit: "hours",
+      term: 2,
     },
     primary: {
       unit: "hours",
@@ -44,22 +44,24 @@ export const TIME_PERIODS = {
   days: {
     name: "days",
     startDate: {
-      unit: "weeks",
-      term: 1,
+      unit: "days",
+      term: 5,
     },
     endDate: {
-      unit: "weeks",
-      term: 1,
+      unit: "days",
+      term: 5,
     },
     primary: {
       unit: "days",
       format: "ddd DD MMM YYYY",
       secondaryPerUnit: 4,
+      excludeLast: true,
     },
     secondary: {
       unit: "hours",
       format: "HH:mm",
       step: 6,
+      excludeLast: true,
     },
   },
   weeks: {

@@ -6,4 +6,12 @@ export class Resource {
     this.name = data.name;
     this.style = data.style || {};
   }
+
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      style: this.style,
+    };
+  }
 }

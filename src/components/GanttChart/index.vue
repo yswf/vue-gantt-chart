@@ -1,72 +1,94 @@
 <template>
-  <div class="gantt-chart" @mousewheel="scale" :style="cssVars">
-    <div style="margin-right: 20px; display: flex; flex-direction: column">
+  <div class="gantt-chart-wrapper">
+    <div class="gantt-chart-controls">
       <span>
         <input type="checkbox" v-model="snapToGrid" id="snap-mode" />
-        <label for="snap-mode">Snap to days</label>
+        <label for="snap-mode">Snap to grid</label>
       </span>
 
       <span>
         <input type="checkbox" v-model="verbose" id="verbose" />
         <label for="verbose">Verbose</label>
       </span>
+      <span>
+        <!-- select time period -->
+        <select v-model="selectedTimePeriod">
+          <option value="hours">Hours</option>
+          <option value="days">Days</option>
+          <option value="weeks">Weeks</option>
+          <option value="months">Months</option>
+          <option value="quarters">Quarters</option>
+          <option value="years">Years</option>
+        </select>
+      </span>
     </div>
-    <div class="gantt-resources">
+    <div class="gantt-chart" @mousewheel="scale" :style="cssVars">
+      <div class="gantt-resources">
+        <div
+          class="gantt-resource"
+          v-for="resource in resources"
+          :key="resource.id"
+          v-text="resource.name"
+        ></div>
+        <div class="gantt-resource">
+          <button style="width: 100%; height: 100%" @click="newResource">
+            +
+          </button>
+        </div>
+      </div>
       <div
-        class="gantt-resource"
-        v-for="resource in resources"
-        :key="resource.id"
-        v-text="resource.name"
-      ></div>
-      <div class="gantt-resource">
-        <button style="width: 100%; height: 100%" @click="newResource">
-          +
-        </button>
-      </div>
-    </div>
-    <div class="gantt-timeline" :id="timeline.id">
-      <div class="gantt-timeunits-primary">
-        <div
-          class="gantt-timeunit-primary"
-          :style="{ width: `${unit.width}px`, left: `${unit.left}px` }"
-          v-for="unit in timelineData.primary"
-          :key="unit.name"
-          v-text="unit.name"
-        ></div>
-      </div>
-      <div class="gantt-timeunits-secondary">
-        <div
-          class="gantt-timeunit-secondary"
-          :style="{ width: `${unit.width}px` }"
-          v-for="(unit, index) in timelineData.secondary"
-          :key="`time-unit-${unit.name}-${index}`"
-          v-text="unit.name"
-        ></div>
-      </div>
-      <div class="tasks">
-        <div
-          class="task"
-          v-for="task in tasks"
-          :key="`task-${task.id}`"
-          :style="{
-            width: `${task.width}px`,
-            transform: `translate(${task.left}px, ${task.top}px)`,
-            ...task.style,
-          }"
-          @mousedown.prevent.stop="taskMove(task, $event)"
-        >
+        class="gantt-timeline"
+        :id="timeline.id"
+        @click.prevent="timelineClick"
+      >
+        <div class="gantt-timeunits-primary">
           <div
-            @mousedown.prevent.stop="taskResize(task, SIDES.left, $event)"
-            class="resize-handle left"
+            class="gantt-timeunit-primary"
+            :style="{ width: `${unit.width}px`, left: `${unit.left}px` }"
+            v-for="unit in timelineData.primary"
+            :key="unit.name"
+            v-text="unit.name"
           ></div>
-          <div class="task-name" v-text="`${task.name}`"></div>
+        </div>
+        <div class="gantt-timeunits-secondary">
           <div
-            @mousedown.prevent.stop="taskResize(task, SIDES.right, $event)"
-            class="resize-handle right"
+            class="gantt-timeunit-secondary"
+            :style="{ width: `${unit.width}px` }"
+            v-for="(unit, index) in timelineData.secondary"
+            :key="`time-unit-${unit.name}-${index}`"
+            v-text="unit.name"
           ></div>
+        </div>
+        <div class="tasks">
+          <div
+            class="task"
+            v-for="task in tasks"
+            :key="`task-${task.id}`"
+            :style="{
+              width: `${task.width}px`,
+              transform: `translate(${task.left}px, ${task.top}px)`,
+              ...task.style,
+            }"
+            @mousedown.prevent.stop="taskMove(task, $event)"
+          >
+            <div
+              @mousedown.prevent.stop="taskResize(task, SIDES.left, $event)"
+              class="resize-handle left"
+            ></div>
+            <div class="task-name" v-text="`${task.name}`"></div>
+            <div
+              @mousedown.prevent.stop="taskResize(task, SIDES.right, $event)"
+              class="resize-handle right"
+            ></div>
+          </div>
         </div>
       </div>
     </div>
+    <pre
+      v-if="verbose"
+      class="gantt-chart-data"
+      v-text="JSON.stringify(ganttChart.toJSON(), null, 2)"
+    ></pre>
   </div>
 </template>
 
@@ -106,6 +128,15 @@ export default {
 
     timelineData() {
       return this.timeline.getTimePeriod();
+    },
+
+    selectedTimePeriod: {
+      get() {
+        return this.timeline.timePeriod.name;
+      },
+      set(value) {
+        this.timeline.setTimePeriod(value);
+      },
     },
 
     settings() {
@@ -196,7 +227,7 @@ export default {
     },
 
     scale(event) {
-      if (!event.ctrlKey) return;
+      if (!event.ctrlKey && !event.metaKey) return;
       event.preventDefault();
 
       const delta = event.deltaY;
@@ -207,12 +238,40 @@ export default {
         this.timeline.changeTimePeriod(-1);
       }
     },
+
+    timelineClick(event) {
+      const date = this.timeline.getDateFromPosition(event);
+      console.log(`Timeline clicked at ${date.toString()}`);
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 $timeunit-height: 30px;
+
+.gantt-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.gantt-chart-controls {
+  display: flex;
+  justify-self: flex-start;
+  gap: 30px;
+  margin-left: 110px;
+  margin-bottom: 20px;
+}
+
+.gantt-chart-data {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+  margin-left: 110px;
+}
 
 .gantt-chart {
   display: flex;
@@ -240,6 +299,13 @@ $timeunit-height: 30px;
   align-items: flex-start;
   width: calc(min(100%, 800px));
   overflow: auto;
+  border-top: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+
+  &::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    max-width: 10px;
+  }
 
   .gantt-timeunits-primary {
     position: relative;
