@@ -87,7 +87,7 @@
     <pre
       v-if="verbose"
       class="gantt-chart-data"
-      v-text="JSON.stringify(ganttChart.toJSON(), null, 2)"
+      v-text="JSON.stringify(chartJSON, null, 2)"
     ></pre>
   </div>
 </template>
@@ -95,35 +95,26 @@
 <script>
 import moment from "moment";
 import { SIDES, TIME_PERIODS } from "@/constants";
-import { Task } from "@/types/task";
 
-import { mapState, mapActions } from "vuex";
+import { mapActions, mapGetters } from "vuex";
 import { Resource } from "../../types/resource";
 
 export default {
   name: "GanttChart",
 
   computed: {
-    ...mapState("ganttChart", {
-      ganttChart: "ganttChart",
+    ...mapGetters("ganttChart", {
+      tasks: "tasks",
+      resources: "resources",
+      timeline: "timeline",
+      settings: "settings",
+      chartJSON: "chartJSON",
     }),
 
     cssVars() {
       return {
         "--gantt-time-unit-width": `${this.timeline.TIME_UNIT_WIDTH}px`,
       };
-    },
-
-    tasks() {
-      return this.ganttChart.tasks;
-    },
-
-    resources() {
-      return this.ganttChart.resources;
-    },
-
-    timeline() {
-      return this.ganttChart.timeline;
     },
 
     timelineData() {
@@ -137,10 +128,6 @@ export default {
       set(value) {
         this.timeline.setTimePeriod(value);
       },
-    },
-
-    settings() {
-      return this.ganttChart.settings;
     },
 
     verbose: {
@@ -174,18 +161,17 @@ export default {
 
   mounted() {
     const tasks = [
-      new Task({
+      {
         name: "Task 1",
         start: 5,
         end: 15,
-      }),
-      new Task({
+      },
+      {
         name: "Task 2",
         start: 10,
         end: 20,
-        y: 1,
         style: { backgroundColor: "wheat" },
-      }),
+      },
     ];
 
     const resources = [
@@ -195,17 +181,12 @@ export default {
     ];
 
     resources.forEach((resource) => this.addResource(resource));
-    tasks.forEach((task) => {
-      if (task.y > this.resources.length) {
-        task.y = 0;
-      }
-      this.addTask(task);
-    });
+    tasks.forEach((task) => this.createTask(task));
   },
 
   methods: {
     ...mapActions("ganttChart", {
-      addTask: "addTask",
+      createTask: "createTask",
       addResource: "addResource",
       setSettings: "setSettings",
     }),

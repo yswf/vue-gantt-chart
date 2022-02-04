@@ -1,3 +1,5 @@
+/// <reference path="./task.d.ts" />
+
 import {
   SIDES,
   TASK_INTERACTIONS,
@@ -9,6 +11,8 @@ import { uuidv4 } from "../utils";
 
 export class Task {
   constructor(data) {
+    this.chart = data?.chart;
+
     this.id = uuidv4();
     this.name = data.name;
 
@@ -27,11 +31,8 @@ export class Task {
     //? it must be set to TASK_INTERACTIONS.none
     //? otherwise any other interactions will be blocked
     this.interaction = TASK_INTERACTIONS.none;
-
-    this.methodsReferences = {};
+    this.methodsRefs = {};
     this.eventsMeta = {};
-
-    this.verbose = data.verbose || false;
   }
 
   get duration() {
@@ -50,10 +51,6 @@ export class Task {
     return this.y * RESOURCE_HEIGHT_PX;
   }
 
-  setVerbose(verbose) {
-    this.verbose = Boolean(verbose);
-  }
-
   interactionIs(interaction) {
     return this.interaction === interaction;
   }
@@ -63,7 +60,7 @@ export class Task {
       this.interaction != TASK_INTERACTIONS.none &&
       interaction != TASK_INTERACTIONS.none
     ) {
-      if (this.verbose) {
+      if (this.chart.settings.verbose) {
         console.warn(
           this.say(
             `can't set interaction to ${interaction} because ${this.interaction} is already set`
@@ -79,7 +76,7 @@ export class Task {
 
   setStart(day) {
     if (day < 0 || day > this.end) {
-      if (this.verbose) {
+      if (this.chart.settings.verbose) {
         console.warn(
           this.say(
             `start day ${day} is out of bound\n`,
@@ -97,7 +94,7 @@ export class Task {
   setEnd(day) {
     // moment current month length
     if (day < this.start || day > moment().daysInMonth()) {
-      if (this.verbose) {
+      if (this.chart.settings.verbose) {
         console.warn(this.say(`end day ${day} is out of bound`));
       }
 
@@ -111,11 +108,11 @@ export class Task {
     this.y = Number(y);
   }
 
-  resizeStart(side, event, options) {
+  resizeStart(side, event) {
     const set = this.setInteraction(TASK_INTERACTIONS.resize);
     if (!set) return;
 
-    const snapToGrid = options?.snapToGrid || false;
+    const snapToGrid = this.chart.getSetting("snapToGrid", false);
 
     this.eventsMeta["resizeStart"] = {
       side,
@@ -125,9 +122,9 @@ export class Task {
       end: this.end,
     };
 
-    this.methodsReferences["resize"] = this.resize.bind(this);
+    this.methodsRefs["resize"] = this.resize.bind(this);
 
-    window.addEventListener("mousemove", this.methodsReferences["resize"]);
+    window.addEventListener("mousemove", this.methodsRefs["resize"]);
     window.addEventListener("mouseup", this.resizeEnd.bind(this), {
       once: true,
     });
@@ -163,15 +160,15 @@ export class Task {
       this.setEnd(Math.round(this.end));
     }
 
-    window.removeEventListener("mousemove", this.methodsReferences["resize"]);
+    window.removeEventListener("mousemove", this.methodsRefs["resize"]);
     delete this.eventsMeta["resizeStart"];
     this.setInteraction(TASK_INTERACTIONS.none);
   }
 
-  moveStart(event, options) {
+  moveStart(event) {
     this.setInteraction(TASK_INTERACTIONS.move);
 
-    const snapToGrid = options?.snapToGrid || false;
+    const snapToGrid = this.chart.getSetting("snapToGrid", false);
 
     this.eventsMeta["moveStart"] = {
       snapToGrid,
@@ -182,9 +179,9 @@ export class Task {
       oldY: this.y,
     };
 
-    this.methodsReferences["move"] = this.move.bind(this);
+    this.methodsRefs["move"] = this.move.bind(this);
 
-    window.addEventListener("mousemove", this.methodsReferences["move"]);
+    window.addEventListener("mousemove", this.methodsRefs["move"]);
     window.addEventListener("mouseup", this.moveEnd.bind(this), {
       once: true,
     });
@@ -229,7 +226,7 @@ export class Task {
       this.setY(Math.round(this.y));
     }
 
-    window.removeEventListener("mousemove", this.methodsReferences["move"]);
+    window.removeEventListener("mousemove", this.methodsRefs["move"]);
     delete this.eventsMeta["moveStart"];
     this.setInteraction(TASK_INTERACTIONS.none);
   }
@@ -247,7 +244,7 @@ export class Task {
     };
   }
 
-  static fromJSON(data) {
-    return new Task(data);
+  static fromJSON(json) {
+    return new Task(json);
   }
 }

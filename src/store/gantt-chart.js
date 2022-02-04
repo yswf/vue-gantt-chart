@@ -1,34 +1,37 @@
-import { GanttChart } from "@/types/gantt-chart";
+import { GanttChart } from "../types/gantt-chart";
+
+export const chart = new GanttChart();
 
 export const ganttChart = {
   namespaced: true,
   state: {
-    ganttChart: new GanttChart(),
+    chart,
   },
   mutations: {
-    addTask(state, task) {
-      state.ganttChart.addTask(task);
+    createTask(state, task) {
+      state.chart.createTask(task);
     },
 
     removeTask(state, task) {
-      state.ganttChart.removeTask(task);
+      state.chart.removeTask(task);
     },
 
     addResource(state, resource) {
-      state.ganttChart.addResource(resource);
+      state.chart.addResource(resource);
     },
 
     removeResource(state, resource) {
-      state.ganttChart.removeResource(resource);
+      state.chart.removeResource(resource);
     },
 
     setSettings(state, settings) {
-      state.ganttChart.setSettings(settings);
+      state.chart.setSettings(settings);
     },
   },
+
   actions: {
-    addTask({ commit }, task) {
-      commit("addTask", task);
+    createTask({ commit }, task) {
+      commit("createTask", task);
     },
 
     removeTask({ commit }, task) {
@@ -46,5 +49,14 @@ export const ganttChart = {
     setSettings({ commit }, settings) {
       commit("setSettings", settings);
     },
+  },
+
+  getters: {
+    tasks: (state) => state.chart.tasks,
+    resources: (state) => state.chart.resources,
+    timeline: (state) => state.chart.timeline,
+    settings: (state) => state.chart.settings,
+
+    chartJSON: (state) => state.chart.toJSON(),
   },
 };

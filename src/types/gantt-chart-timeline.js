@@ -3,8 +3,8 @@ import { uuidv4 } from "@/utils";
 import moment from "moment";
 
 export class GanttChartTimeline {
-  constructor(data, ganttChart) {
-    this.ganttChart = ganttChart;
+  constructor(data) {
+    this.chart = data?.chart;
 
     this.id = `gantt-timeline-${uuidv4()}`;
     this.timePeriod = data?.timePeriod || TIME_PERIODS.days;
@@ -52,7 +52,7 @@ export class GanttChartTimeline {
 
   getStartDate() {
     if (!this.timePeriod?.startDate) {
-      if (this.ganttChart.settings.verbose) {
+      if (this.chart.settings.verbose) {
         console.warn(
           `GanttChartTimeline: startDate is not defined on a time period: ${this.timePeriod}`
         );
@@ -68,7 +68,7 @@ export class GanttChartTimeline {
 
   getEndDate() {
     if (!this.timePeriod?.endDate) {
-      if (this.ganttChart.settings.verbose) {
+      if (this.chart.settings.verbose) {
         console.warn(
           `GanttChartTimeline: endDate is not defined on a time period: ${this.timePeriod}`
         );

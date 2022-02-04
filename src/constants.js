@@ -10,12 +10,6 @@ export const TASK_INTERACTIONS = {
   regroup: 3,
 };
 
-export function randomPeriod() {
-  const keys = Object.keys(TIME_PERIODS);
-  const period = keys[Math.floor(Math.random() * keys.length)];
-  return period;
-}
-
 export const DEFAULT_TIME_UNIT_WIDTH = 40;
 export const RESOURCE_HEIGHT_PX = 40;
 

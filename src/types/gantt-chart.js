@@ -1,5 +1,7 @@
-import { Task } from "@/types/task";
-import { Resource } from "@/types/resource";
+/// <reference path="./gantt-chart.d.ts" />
+
+import { Task } from "./task";
+import { Resource } from "./resource";
 import { arrayRemove, uuidv4 } from "../utils";
 import { GanttChartTimeline } from "./gantt-chart-timeline";
 
@@ -17,7 +19,13 @@ export class GanttChart {
     this.resources = data.resources || [];
     this.settings = Object.assign({}, defaultSettings, data.settings);
 
-    this.timeline = new GanttChartTimeline(data.timeline, this);
+    this.timeline = new GanttChartTimeline({ chart: this });
+  }
+
+  createTask(data) {
+    const task = new Task(Object.assign({}, data, { chart: this }));
+    this.addTask(task);
+    return task;
   }
 
   addTask(task) {
@@ -27,6 +35,7 @@ export class GanttChart {
       }
       return;
     }
+
     this.tasks.push(task);
   }
 
@@ -56,17 +65,23 @@ export class GanttChart {
     }
   }
 
+  getSetting(key, def) {
+    if (Object.prototype.hasOwnProperty.call(this.settings, key)) {
+      return this.settings[key];
+    }
+    return def;
+  }
+
   toJSON() {
     return {
       id: this.id,
       tasks: this.tasks.map((t) => t.toJSON()),
       resources: this.resources.map((r) => r.toJSON()),
       settings: this.settings,
-      timeline: this.timeline.toJSON(),
     };
   }
 
-  static fromJSON(data) {
-    return new GanttChart(data);
+  static fromJSON(json) {
+    return new GanttChart(json);
   }
 }
