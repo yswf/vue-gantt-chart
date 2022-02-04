@@ -7,7 +7,7 @@ import { GanttChartTimeline } from "./gantt-chart-timeline";
 
 export class GanttChart {
   constructor(data) {
-    if (data == null || typeof data != "object") data = {};
+    const clone = Object.assign({}, data);
 
     const defaultSettings = {
       verbose: false,
@@ -15,9 +15,9 @@ export class GanttChart {
     };
 
     this.id = `gantt-chart-${uuidv4()}`;
-    this.tasks = data.tasks || [];
-    this.resources = data.resources || [];
-    this.settings = Object.assign({}, defaultSettings, data.settings);
+    this.tasks = clone.tasks || [];
+    this.resources = clone.resources || [];
+    this.settings = Object.assign({}, defaultSettings, clone.settings);
 
     this.timeline = new GanttChartTimeline({ chart: this });
   }
@@ -41,6 +41,12 @@ export class GanttChart {
 
   removeTask(task) {
     this.tasks = arrayRemove(this.tasks, task);
+  }
+
+  createResource(data) {
+    const resource = new Resource(Object.assign({}, data, { chart: this }));
+    this.addResource(resource);
+    return resource;
   }
 
   addResource(resource) {

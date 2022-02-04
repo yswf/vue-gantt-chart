@@ -11,11 +11,11 @@ export class GanttChart {
   timeline: GanttChartTimeline;
 
   createTask(task: Task): void;
-  private addTask(task: Task): Task;
+  private addTask(task: Task): void;
   removeTask(task: Task): void;
 
   createResource(resource: Resource): void;
-  private addResource(resource: Resource): Resource;
+  private addResource(resource: Resource): void;
   removeResource(resource: Resource): void;
 
   setSettings(settings: GanttChartSettings): void;

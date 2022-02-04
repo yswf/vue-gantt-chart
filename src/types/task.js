@@ -5,24 +5,28 @@ import {
   TASK_INTERACTIONS,
   DEFAULT_TIME_UNIT_WIDTH,
   RESOURCE_HEIGHT_PX,
+  DEFAULT_DATE_FORMAT,
 } from "@/constants";
 import moment from "moment";
 import { uuidv4 } from "../utils";
 
 export class Task {
   constructor(data) {
-    this.chart = data?.chart;
+    const clone = Object.assign({}, data);
+
+    this.chart = clone.chart;
 
     this.id = uuidv4();
-    this.name = data.name;
+    this.name = clone.name;
 
-    this.start = Number(data.start) || 0;
-    this.end = Number(data.end) || 1;
+    this.start = moment(clone.start, DEFAULT_DATE_FORMAT) || moment();
+    this.end = moment(clone.end, DEFAULT_DATE_FORMAT) || moment();
+    this.resource = clone.resource;
 
     this.x = this.start * DEFAULT_TIME_UNIT_WIDTH;
-    this.y = (Number(data.y) || 0) * RESOURCE_HEIGHT_PX;
+    this.y = (Number(clone.y) || 0) * RESOURCE_HEIGHT_PX;
 
-    this.style = data.style || {};
+    this.style = clone.style || {};
 
     //? interaction property is used to determine
     //? if there is any interaction with the task
@@ -36,15 +40,17 @@ export class Task {
   }
 
   get duration() {
-    return this.end - this.start;
+    return this.end.diff(this.start, "seconds");
   }
 
   get width() {
-    return this.duration * DEFAULT_TIME_UNIT_WIDTH;
+    const width = this.duration * this.chart.timeline.getPixelsPerSecond();
+    const scrollWidth = this.chart.timeline.scrollWidth;
+    return width + this.left > scrollWidth ? scrollWidth - this.left : width;
   }
 
   get left() {
-    return this.start * DEFAULT_TIME_UNIT_WIDTH;
+    return this.chart.timeline.getPositionFromDate(this.start);
   }
 
   get top() {

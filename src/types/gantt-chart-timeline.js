@@ -1,20 +1,28 @@
-import { DEFAULT_TIME_UNIT_WIDTH, TIME_PERIODS } from "../constants";
+import {
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_TIME_UNIT_WIDTH,
+  TIME_PERIODS,
+} from "../constants";
 import { uuidv4 } from "@/utils";
 import moment from "moment";
+import { momentCeil, momentFloor } from "../date-utils";
 
 export class GanttChartTimeline {
   constructor(data) {
-    this.chart = data?.chart;
+    const clone = Object.assign({}, data);
+
+    this.chart = clone.chart;
 
     this.id = `gantt-timeline-${uuidv4()}`;
-    this.timePeriod = data?.timePeriod || TIME_PERIODS.days;
+    this.timePeriod = clone.timePeriod || TIME_PERIODS.days;
+    this.timePeriodData = null;
 
     this.TIME_UNIT_WIDTH = DEFAULT_TIME_UNIT_WIDTH;
 
     this.year = 2022;
     this.month = 1;
-    this.day = 15;
-    this.hour = 12;
+    this.day = 13;
+    this.hour = 10;
     this.minute = 0;
   }
 
@@ -22,72 +30,54 @@ export class GanttChartTimeline {
     return document.getElementById(this.id) || {};
   }
 
-  get containerWidth() {
-    return this.container.clientWidth;
-  }
-
-  get containerHeight() {
-    return this.container.clientHeight;
-  }
-
-  get containerScrollLeft() {
+  get scrollLeft() {
     return this.container.scrollLeft;
   }
 
-  set containerScrollLeft(scrollLeft) {
+  set scrollLeft(scrollLeft) {
     this.container.scrollLeft = scrollLeft;
   }
 
-  get containerScrollWidth() {
+  get scrollWidth() {
     return this.container.scrollWidth;
   }
 
   get containerScrollbarThumbWidth() {
     const scrollbarArrowWidth = 20;
-    const viewableRatio = window.innerWidth / this.containerScrollWidth;
+    const viewableRatio = window.innerWidth / this.scrollWidth;
     const scrollBarArea = window.innerWidth - scrollbarArrowWidth * 2;
 
     return scrollBarArea * viewableRatio;
   }
 
   getStartDate() {
-    if (!this.timePeriod?.startDate) {
-      if (this.chart.settings.verbose) {
-        console.warn(
-          `GanttChartTimeline: startDate is not defined on a time period: ${this.timePeriod}`
-        );
-      }
-      return this.getCurrentMoment();
-    }
-
-    return this.getCurrentMoment().subtract(
-      this.timePeriod.startDate.term,
-      this.timePeriod.startDate.unit
+    const roundTo = this.timePeriod.roundTo || "day";
+    return momentFloor(
+      this.getCurrentMoment().subtract(
+        this.timePeriod.startDate.term,
+        this.timePeriod.startDate.unit
+      ),
+      roundTo
     );
   }
 
   getEndDate() {
-    if (!this.timePeriod?.endDate) {
-      if (this.chart.settings.verbose) {
-        console.warn(
-          `GanttChartTimeline: endDate is not defined on a time period: ${this.timePeriod}`
-        );
-      }
-      return this.getCurrentMoment();
-    }
-
-    return this.getCurrentMoment().add(
-      this.timePeriod.endDate.term,
-      this.timePeriod.endDate.unit
+    const roundTo = this.timePeriod.roundTo || "day";
+    return momentCeil(
+      this.getCurrentMoment().add(
+        this.timePeriod.endDate.term,
+        this.timePeriod.endDate.unit
+      ),
+      roundTo
     );
   }
 
   getCurrentDate() {
-    return `${this.year}/${this.month}/${this.day} ${this.hour}:${this.minute}`;
+    return `${this.year}-${this.month}-${this.day} ${this.hour}:${this.minute}`;
   }
 
   getCurrentMoment() {
-    return moment(this.getCurrentDate(), "YYYY/M/DD HH:mm");
+    return moment(this.getCurrentDate(), DEFAULT_DATE_FORMAT);
   }
 
   changeTimePeriod(offset = 1) {
@@ -118,8 +108,6 @@ export class GanttChartTimeline {
     const primaryFormat = period.primary.format || "MM/YYYY DD";
     const secondaryFormat = period.secondary.format || "HH:mm";
     const secondaryStep = period.secondary.step || 1;
-    const primaryExcludeLast = period.primary.excludeLast || false;
-    const secondaryExcludeLast = period.secondary.excludeLast || false;
 
     const startDate = this.getStartDate();
     const endDate = this.getEndDate();
@@ -127,8 +115,7 @@ export class GanttChartTimeline {
     let source = GanttChartTimeline.getTimeRange(
       startDate,
       endDate,
-      primaryUnit,
-      { excludeLast: primaryExcludeLast }
+      primaryUnit
     );
 
     const primary = [];
@@ -152,7 +139,7 @@ export class GanttChartTimeline {
       startDate,
       endDate,
       secondaryUnit,
-      { step: secondaryStep, excludeLast: secondaryExcludeLast }
+      { step: secondaryStep }
     );
 
     const secondary = [];
@@ -165,7 +152,7 @@ export class GanttChartTimeline {
       });
     }
 
-    const result = {
+    this.timePeriodData = {
       primary,
       secondary,
       totalWidth: widthsSum,
@@ -182,47 +169,48 @@ export class GanttChartTimeline {
     //? then we can properly set the scrollLeft.
     setTimeout(() => {
       if (!this.container) return;
-      this.containerScrollLeft =
+      this.scrollLeft =
         this.getPositionFromDate(this.getCurrentMoment()) -
         this.containerScrollbarThumbWidth;
     }, 25);
 
-    return result;
+    return this.timePeriodData;
   }
 
-  pixelsPerSecond() {
+  getPixelsPerSecond() {
     return (
-      this.getEndDate().diff(this.getStartDate(), "seconds") /
-      this.containerScrollWidth
+      this.timePeriodData.totalWidth /
+      this.getEndDate().diff(this.getStartDate(), "seconds")
     );
   }
 
-  getDateFromPosition(positionEvent) {
-    const delta =
-      positionEvent.clientX -
-      this.container.getBoundingClientRect().left +
-      this.containerScrollLeft;
+  getDateFromPosition(x) {
+    const containerOffset = this.container.getBoundingClientRect().left;
+    const delta = x - containerOffset + this.scrollLeft;
 
-    return this.getStartDate().add(delta * this.pixelsPerSecond(), "seconds");
+    return this.getStartDate().add(
+      delta / this.getPixelsPerSecond(),
+      "seconds"
+    );
   }
 
   getPositionFromDate(date) {
-    return date.diff(this.getStartDate(), "seconds") / this.pixelsPerSecond();
+    const diff = date.diff(this.getStartDate(), "seconds");
+    const pps = this.getPixelsPerSecond();
+
+    return diff * pps;
   }
 
-  static getTimeRange(startDate, endDate, type, options = {}) {
-    if (!(startDate instanceof moment)) startDate = moment(startDate);
-    if (!(endDate instanceof moment)) endDate = moment(endDate);
-
+  static getTimeRange(start, end, type, options = {}) {
     const step = options.step || 1;
     const format = options.format || null;
     const stringify = options.stringify || false;
-    const excludeLast = options.excludeLast || false;
+
+    const startDate = !(start instanceof moment) ? moment(start) : start;
+    const endDate = !(end instanceof moment) ? moment(end) : end;
 
     let diff = endDate.diff(startDate, type);
     if (diff < 0) return [];
-
-    if (!excludeLast) diff += 1;
 
     let range = [];
     for (let i = 0; i < diff; i += step) {

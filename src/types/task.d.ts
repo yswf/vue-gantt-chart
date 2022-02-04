@@ -1,5 +1,6 @@
 import { TASK_INTERACTIONS, SIDES } from "../constants";
 import { GanttChart } from "./gantt-chart";
+import { Resource } from "./resource";
 
 export class Task {
   chart: GanttChart;
@@ -9,6 +10,7 @@ export class Task {
 
   start: Date;
   end: Date;
+  resource: Resource;
 
   x: number;
   y: number;

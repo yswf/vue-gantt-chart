@@ -44,7 +44,10 @@
         <div class="gantt-timeunits-primary">
           <div
             class="gantt-timeunit-primary"
-            :style="{ width: `${unit.width}px`, left: `${unit.left}px` }"
+            :style="{
+              width: `${unit.width}px`,
+              transform: `translateX(${unit.left}px)`,
+            }"
             v-for="unit in timelineData.primary"
             :key="unit.name"
             v-text="unit.name"
@@ -93,7 +96,6 @@
 </template>
 
 <script>
-import moment from "moment";
 import { SIDES, TIME_PERIODS } from "@/constants";
 
 import { mapActions, mapGetters } from "vuex";
@@ -114,6 +116,7 @@ export default {
     cssVars() {
       return {
         "--gantt-time-unit-width": `${this.timeline.TIME_UNIT_WIDTH}px`,
+        "--gantt-timeline-max-width": `${this.timelineMaxWidth}px`,
       };
     },
 
@@ -153,9 +156,6 @@ export default {
     return {
       SIDES,
       TIME_PERIODS,
-
-      currentMonth: moment().format("MMMM"),
-      currentMonthDays: moment().daysInMonth(),
     };
   },
 
@@ -163,15 +163,15 @@ export default {
     const tasks = [
       {
         name: "Task 1",
-        start: 5,
-        end: 15,
+        start: "2022-01-12 08:00",
+        end: "2022-01-14 10:00",
       },
-      {
-        name: "Task 2",
-        start: 10,
-        end: 20,
-        style: { backgroundColor: "wheat" },
-      },
+      // {
+      //   name: "Task 2",
+      //   start: "2022-01-11 08:00",
+      //   end: "2022-01-13 10:00",
+      //   style: { backgroundColor: "wheat" },
+      // },
     ];
 
     const resources = [
@@ -221,7 +221,7 @@ export default {
     },
 
     timelineClick(event) {
-      const date = this.timeline.getDateFromPosition(event);
+      const date = this.timeline.getDateFromPosition(event.clientX);
       console.log(`Timeline clicked at ${date.toString()}`);
     },
   },
@@ -330,10 +330,11 @@ $timeunit-height: 30px;
     align-items: center;
     justify-content: center;
     height: 40px;
-    min-width: 42px;
+    min-width: 2px;
     background-color: #69abe3;
     opacity: 0.7;
     cursor: move;
+    overflow: hidden;
 
     .resize-handle {
       z-index: 1;

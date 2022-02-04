@@ -12,10 +12,12 @@ export const TASK_INTERACTIONS = {
 
 export const DEFAULT_TIME_UNIT_WIDTH = 40;
 export const RESOURCE_HEIGHT_PX = 40;
+export const DEFAULT_DATE_FORMAT = "YYYY-MM-DD HH:mm";
 
 export const TIME_PERIODS = {
   hours: {
     name: "hours",
+    roundTo: "day",
     startDate: {
       unit: "hours",
       term: 2,
@@ -37,6 +39,7 @@ export const TIME_PERIODS = {
   },
   days: {
     name: "days",
+    roundTo: "day",
     startDate: {
       unit: "days",
       term: 5,
@@ -49,17 +52,16 @@ export const TIME_PERIODS = {
       unit: "days",
       format: "ddd DD MMM YYYY",
       secondaryPerUnit: 4,
-      excludeLast: true,
     },
     secondary: {
       unit: "hours",
       format: "HH:mm",
       step: 6,
-      excludeLast: true,
     },
   },
   weeks: {
     name: "weeks",
+    roundTo: "week",
     startDate: {
       unit: "months",
       term: 1,
@@ -80,6 +82,7 @@ export const TIME_PERIODS = {
   },
   months: {
     name: "months",
+    roundTo: "year",
     startDate: {
       unit: "years",
       term: 1,
@@ -91,7 +94,7 @@ export const TIME_PERIODS = {
     primary: {
       unit: "months",
       format: "MMM YYYY",
-      secondaryPerUnit: 4,
+      secondaryPerUnit: 4.345,
     },
     secondary: {
       unit: "weeks",
@@ -100,6 +103,7 @@ export const TIME_PERIODS = {
   },
   quarters: {
     name: "quarters",
+    roundTo: "year",
     startDate: {
       unit: "years",
       term: 2,
@@ -120,6 +124,7 @@ export const TIME_PERIODS = {
   },
   years: {
     name: "years",
+    roundTo: "year",
     startDate: {
       unit: "years",
       term: 5,
