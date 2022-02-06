@@ -8,7 +8,7 @@ import {
   DEFAULT_DATE_FORMAT,
 } from "@/constants";
 import moment from "moment";
-import { uuidv4 } from "../utils";
+import { roundToNearest, uuidv4 } from "../utils";
 
 export class Task {
   constructor(data) {
@@ -19,8 +19,9 @@ export class Task {
     this.id = uuidv4();
     this.name = clone.name;
 
-    this.start = moment(clone.start, DEFAULT_DATE_FORMAT) || moment();
-    this.end = moment(clone.end, DEFAULT_DATE_FORMAT) || moment();
+    this.start =
+      moment(clone.start, DEFAULT_DATE_FORMAT).unix() || moment.now();
+    this.end = moment(clone.end, DEFAULT_DATE_FORMAT).unix() || moment.now();
     this.resource = clone.resource;
 
     this.x = this.start * DEFAULT_TIME_UNIT_WIDTH;
@@ -40,21 +41,57 @@ export class Task {
   }
 
   get duration() {
-    return this.end.diff(this.start, "seconds");
+    return this.end - this.start;
   }
 
   get width() {
-    const width = this.duration * this.chart.timeline.getPixelsPerSecond();
+    const width = this.duration * this.getPixelsPerSecond();
     const scrollWidth = this.chart.timeline.scrollWidth;
     return width + this.left > scrollWidth ? scrollWidth - this.left : width;
   }
 
   get left() {
-    return this.chart.timeline.getPositionFromDate(this.start);
+    return this.chart.timeline.getPositionFromDate(moment.unix(this.start));
+  }
+
+  get visible() {
+    return (
+      this.left + this.width >= 0 &&
+      this.left <= this.chart.timeline.scrollWidth
+    );
   }
 
   get top() {
     return this.y * RESOURCE_HEIGHT_PX;
+  }
+
+  getStartDate(options) {
+    const o = Object.assign(
+      { format: DEFAULT_DATE_FORMAT, stringify: false },
+      options
+    );
+
+    const date = moment.unix(this.start).format(o.format);
+    return o.stringify ? date.toString() : date;
+  }
+
+  getDurationString() {
+    const duration = moment.duration(this.duration, "seconds");
+    const years = duration.years();
+    const months = duration.months();
+    const days = duration.days();
+    const hours = duration.hours();
+    const minutes = duration.minutes();
+
+    if (years) return `${years} years`;
+    if (months) return `${months} months`;
+    if (days) return `${days} days`;
+    if (hours) return `${hours} hours`;
+    return `${minutes} minutes`;
+  }
+
+  getPixelsPerSecond() {
+    return this.chart.timeline.getPixelsPerSecond();
   }
 
   interactionIs(interaction) {
@@ -124,8 +161,8 @@ export class Task {
       side,
       snapToGrid,
       startX: event.clientX,
-      start: this.start,
-      end: this.end,
+      startOld: this.start,
+      endOld: this.end,
     };
 
     this.methodsRefs["resize"] = this.resize.bind(this);
@@ -143,28 +180,29 @@ export class Task {
     )
       return;
 
-    const { startX, start, end, side, snapToGrid } =
+    const { startX, startOld, endOld, side, snapToGrid } =
       this.eventsMeta["resizeStart"];
 
-    let delta = (event.clientX - startX) / DEFAULT_TIME_UNIT_WIDTH;
+    let delta = (event.clientX - startX) / this.getPixelsPerSecond();
     if (snapToGrid && Math.abs(delta) < 1) return;
     else if (snapToGrid) delta = parseInt(delta);
 
     if (side === SIDES.left) {
-      this.setStart(start + delta);
+      this.start = startOld + delta;
     } else if (side === SIDES.right) {
-      this.setEnd(end + delta);
+      this.end = endOld + delta;
     }
   }
 
   resizeEnd() {
     if (!this.interactionIs(TASK_INTERACTIONS.resize)) return;
 
-    const { snapToGrid } = this.eventsMeta["resizeStart"];
-    if (!snapToGrid) {
-      this.setStart(Math.round(this.start));
-      this.setEnd(Math.round(this.end));
-    }
+    //! TODO: fix rounding for unix timestamps
+    // const { snapToGrid } = this.eventsMeta["resizeStart"];
+    // if (!snapToGrid) {
+    //   this.setStart(Math.round(this.start));
+    //   this.setEnd(Math.round(this.end));
+    // }
 
     window.removeEventListener("mousemove", this.methodsRefs["resize"]);
     delete this.eventsMeta["resizeStart"];
@@ -180,9 +218,9 @@ export class Task {
       snapToGrid,
       startX: event.clientX,
       startY: event.clientY,
-      oldStart: this.start,
-      oldEnd: this.end,
-      oldY: this.y,
+      startOld: this.start,
+      endOld: this.end,
+      yOld: this.y,
     };
 
     this.methodsRefs["move"] = this.move.bind(this);
@@ -200,37 +238,43 @@ export class Task {
     )
       return;
 
-    const { startX, startY, oldStart, oldEnd, oldY, snapToGrid } =
+    const { startX, startY, startOld, endOld, yOld, snapToGrid } =
       this.eventsMeta["moveStart"];
 
     const deltaX = event.clientX - startX;
     const deltaY = event.clientY - startY;
 
-    let days = deltaX / DEFAULT_TIME_UNIT_WIDTH;
-    let y = deltaY / RESOURCE_HEIGHT_PX;
+    let deltaTime = 0;
+    let deltaResources = 0;
 
     if (snapToGrid) {
-      const daysMovement = Math.abs(days) >= 1;
-      const yMovement = Math.abs(y) >= 1;
+      const unitWidth = this.chart.timeline.TIME_UNIT_WIDTH;
+      const xMovement = Math.abs(deltaX) >= unitWidth;
+      const yMovement = Math.abs(deltaY) >= RESOURCE_HEIGHT_PX;
 
-      days = daysMovement ? parseInt(days) : 0;
-      y = yMovement ? parseInt(y) : 0;
+      if (xMovement) {
+        deltaTime =
+          roundToNearest(deltaX, unitWidth) / this.getPixelsPerSecond();
+      }
+
+      if (yMovement) {
+        deltaResources = Math.round(deltaY / RESOURCE_HEIGHT_PX);
+      }
+    } else {
+      deltaTime = deltaX / this.getPixelsPerSecond();
+      deltaResources = deltaY / RESOURCE_HEIGHT_PX;
     }
 
-    this.setStart(oldStart + days);
-    this.setEnd(oldEnd + days);
-    this.setY(oldY + y);
+    this.start = startOld + deltaTime;
+    this.end = endOld + deltaTime;
+    this.setY(yOld + deltaResources);
   }
 
   moveEnd() {
     if (!this.interactionIs(TASK_INTERACTIONS.move)) return;
 
     const { snapToGrid } = this.eventsMeta["moveStart"];
-    if (!snapToGrid) {
-      this.setStart(Math.round(this.start));
-      this.setEnd(Math.round(this.end));
-      this.setY(Math.round(this.y));
-    }
+    if (!snapToGrid) this.setY(Math.round(this.y));
 
     window.removeEventListener("mousemove", this.methodsRefs["move"]);
     delete this.eventsMeta["moveStart"];

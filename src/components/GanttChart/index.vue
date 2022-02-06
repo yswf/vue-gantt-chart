@@ -36,11 +36,7 @@
           </button>
         </div>
       </div>
-      <div
-        class="gantt-timeline"
-        :id="timeline.id"
-        @click.prevent="timelineClick"
-      >
+      <div class="gantt-timeline" :id="timeline.id" @click="timelineClick">
         <div class="gantt-timeunits-primary">
           <div
             class="gantt-timeunit-primary"
@@ -65,20 +61,31 @@
         <div class="tasks">
           <div
             class="task"
-            v-for="task in tasks"
+            v-for="task in filteredTasks"
             :key="`task-${task.id}`"
             :style="{
               width: `${task.width}px`,
               transform: `translate(${task.left}px, ${task.top}px)`,
               ...task.style,
             }"
+            @click.stop
             @mousedown.prevent.stop="taskMove(task, $event)"
           >
             <div
               @mousedown.prevent.stop="taskResize(task, SIDES.left, $event)"
               class="resize-handle left"
             ></div>
-            <div class="task-name" v-text="`${task.name}`"></div>
+            <div class="task-content">
+              <div class="task-name" v-text="`${task.name}`"></div>
+              <div
+                class="task-start"
+                v-text="
+                  `Start: ${task.getStartDate({
+                    stringify: true,
+                  })} | Duration: ${task.getDurationString()}`
+                "
+              ></div>
+            </div>
             <div
               @mousedown.prevent.stop="taskResize(task, SIDES.right, $event)"
               class="resize-handle right"
@@ -98,13 +105,14 @@
 <script>
 import { SIDES, TIME_PERIODS } from "@/constants";
 
-import { mapActions, mapGetters } from "vuex";
+import { mapState, mapActions, mapGetters } from "vuex";
 import { Resource } from "../../types/resource";
 
 export default {
   name: "GanttChart",
 
   computed: {
+    ...mapState("ganttChart", { chart: "chart" }),
     ...mapGetters("ganttChart", {
       tasks: "tasks",
       resources: "resources",
@@ -122,6 +130,10 @@ export default {
 
     timelineData() {
       return this.timeline.getTimePeriod();
+    },
+
+    filteredTasks() {
+      return this.tasks.filter((task) => task.visible);
     },
 
     selectedTimePeriod: {
@@ -222,7 +234,18 @@ export default {
 
     timelineClick(event) {
       const date = this.timeline.getDateFromPosition(event.clientX);
-      console.log(`Timeline clicked at ${date.toString()}`);
+
+      console.log(date.toString());
+
+      // let task = {
+      //   name: "New task",
+      //   start: date.toString(),
+      //   end: date.add(1, "days").toString(),
+      // };
+
+      // task = this.chart.createTask(task);
+
+      // console.log(task);
     },
   },
 };
@@ -335,6 +358,34 @@ $timeunit-height: 30px;
     opacity: 0.7;
     cursor: move;
     overflow: hidden;
+    border-radius: 2px;
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      width: 100%;
+      padding: 5px;
+      color: #333;
+      font-size: 0.8rem;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      .task-name {
+        font-size: 0.9rem;
+        font-weight: normal;
+        align-self: center;
+        color: #000;
+      }
+
+      .task-start {
+        font-size: 0.7rem;
+        font-weight: normal;
+      }
+    }
 
     .resize-handle {
       z-index: 1;

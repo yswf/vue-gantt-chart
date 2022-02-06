@@ -39,7 +39,7 @@ export class GanttChartTimeline {
   }
 
   get scrollWidth() {
-    return this.container.scrollWidth;
+    return this.timePeriodData.totalWidth;
   }
 
   get containerScrollbarThumbWidth() {
@@ -48,6 +48,26 @@ export class GanttChartTimeline {
     const scrollBarArea = window.innerWidth - scrollbarArrowWidth * 2;
 
     return scrollBarArea * viewableRatio;
+  }
+
+  getPrimaryUnit() {
+    return this.timePeriodData.primary.unit || "days";
+  }
+
+  getSecondaryUnit() {
+    return this.timePeriodData.secondary.unit || "hours";
+  }
+
+  getCurrentDate() {
+    return `${this.year}-${this.month}-${this.day} ${this.hour}:${this.minute}`;
+  }
+
+  getCurrentTimestamp() {
+    return this.getCurrentMoment().unix();
+  }
+
+  getCurrentMoment() {
+    return moment(this.getCurrentDate(), DEFAULT_DATE_FORMAT);
   }
 
   getStartDate() {
@@ -70,14 +90,6 @@ export class GanttChartTimeline {
       ),
       roundTo
     );
-  }
-
-  getCurrentDate() {
-    return `${this.year}-${this.month}-${this.day} ${this.hour}:${this.minute}`;
-  }
-
-  getCurrentMoment() {
-    return moment(this.getCurrentDate(), DEFAULT_DATE_FORMAT);
   }
 
   changeTimePeriod(offset = 1) {
