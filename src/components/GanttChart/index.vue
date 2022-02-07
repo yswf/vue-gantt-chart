@@ -271,8 +271,8 @@ export default {
           Object.assign(this.taskSpawnModalData, {
             shown: true,
             taskName: task.name,
-            taskStart: start,
-            taskEnd: end,
+            taskStart: task.startToString(),
+            taskEnd: task.endToString(),
           });
         },
       });

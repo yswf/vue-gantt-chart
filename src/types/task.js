@@ -69,17 +69,15 @@ export class Task {
     return !this.interactionIs(TASK_INTERACTIONS.none);
   }
 
-  getStartDate(options) {
-    const o = Object.assign(
-      { format: DEFAULT_DATE_FORMAT, stringify: false },
-      options
-    );
-
-    const date = moment.unix(this.start).format(o.format);
-    return o.stringify ? date.toString() : date;
+  startToString() {
+    return moment.unix(this.start).format(DEFAULT_DATE_FORMAT);
   }
 
-  getDurationString() {
+  endToString() {
+    return moment.unix(this.end).format(DEFAULT_DATE_FORMAT);
+  }
+
+  durationToString() {
     const duration = moment.duration(this.duration, "seconds");
     const years = duration.years();
     const months = duration.months();

@@ -20,9 +20,7 @@
       <div
         class="task-start"
         v-text="
-          `Start: ${task.getStartDate({
-            stringify: true,
-          })} | Duration: ${task.getDurationString()}`
+          `Start: ${task.startToString()} | Duration: ${task.durationToString()}`
         "
       ></div>
     </div>
