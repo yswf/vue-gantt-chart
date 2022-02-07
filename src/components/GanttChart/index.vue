@@ -36,7 +36,12 @@
           </button>
         </div>
       </div>
-      <div class="gantt-timeline" :id="timeline.id" @click="timelineClick">
+      <div
+        class="gantt-timeline"
+        :id="timeline.id"
+        @scroll="preventTaskSpawn"
+        @mousedown="taskSpawnStart"
+      >
         <div class="gantt-timeunits-primary">
           <div
             class="gantt-timeunit-primary"
@@ -59,38 +64,11 @@
           ></div>
         </div>
         <div class="tasks">
-          <div
-            class="task"
+          <Task
             v-for="task in filteredTasks"
             :key="`task-${task.id}`"
-            :style="{
-              width: `${task.width}px`,
-              transform: `translate(${task.left}px, ${task.top}px)`,
-              ...task.style,
-            }"
-            @click.stop
-            @mousedown.prevent.stop="taskMove(task, $event)"
-          >
-            <div
-              @mousedown.prevent.stop="taskResize(task, SIDES.left, $event)"
-              class="resize-handle left"
-            ></div>
-            <div class="task-content">
-              <div class="task-name" v-text="`${task.name}`"></div>
-              <div
-                class="task-start"
-                v-text="
-                  `Start: ${task.getStartDate({
-                    stringify: true,
-                  })} | Duration: ${task.getDurationString()}`
-                "
-              ></div>
-            </div>
-            <div
-              @mousedown.prevent.stop="taskResize(task, SIDES.right, $event)"
-              class="resize-handle right"
-            ></div>
-          </div>
+            v-bind="{ task }"
+          />
         </div>
       </div>
     </div>
@@ -103,13 +81,20 @@
 </template>
 
 <script>
-import { SIDES, TIME_PERIODS } from "@/constants";
+import Task from "./Task.vue";
+
+import { SIDES } from "@/constants";
 
 import { mapState, mapActions, mapGetters } from "vuex";
+import { DEFAULT_DATE_FORMAT } from "../../constants";
 import { Resource } from "../../types/resource";
 
 export default {
   name: "GanttChart",
+
+  components: {
+    Task,
+  },
 
   computed: {
     ...mapState("ganttChart", { chart: "chart" }),
@@ -167,7 +152,8 @@ export default {
   data() {
     return {
       SIDES,
-      TIME_PERIODS,
+
+      taskSpawnData: null,
     };
   },
 
@@ -178,12 +164,6 @@ export default {
         start: "2022-01-12 08:00",
         end: "2022-01-14 10:00",
       },
-      // {
-      //   name: "Task 2",
-      //   start: "2022-01-11 08:00",
-      //   end: "2022-01-13 10:00",
-      //   style: { backgroundColor: "wheat" },
-      // },
     ];
 
     const resources = [
@@ -203,18 +183,6 @@ export default {
       setSettings: "setSettings",
     }),
 
-    taskResize(task, side, event) {
-      task.resizeStart(side, event, {
-        snapToGrid: this.snapToGrid,
-      });
-    },
-
-    taskMove(task, event) {
-      task.moveStart(event, {
-        snapToGrid: this.snapToGrid,
-      });
-    },
-
     newResource() {
       this.addResource(new Resource({ name: "New resource" }));
     },
@@ -232,20 +200,46 @@ export default {
       }
     },
 
-    timelineClick(event) {
+    taskSpawnStart(event) {
       const date = this.timeline.getDateFromPosition(event.clientX);
 
-      console.log(date.toString());
+      this.taskSpawnData = {
+        initialCall: true,
+        date,
+        event,
+      };
 
-      // let task = {
-      //   name: "New task",
-      //   start: date.toString(),
-      //   end: date.add(1, "days").toString(),
-      // };
+      document.addEventListener("mousemove", this.taskSpawn);
+      document.addEventListener(
+        "mouseup",
+        () => {
+          window.removeEventListener("mousemove", this.taskSpawn);
+          this.taskSpawnData = null;
+        },
+        { once: true }
+      );
+    },
 
-      // task = this.chart.createTask(task);
+    taskSpawn(event) {
+      if (!this.taskSpawnData?.initialCall) return;
 
-      // console.log(task);
+      const date = this.taskSpawnData.date;
+      const start = date.format(DEFAULT_DATE_FORMAT).toString();
+      const end = date.add(1, "minute").format(DEFAULT_DATE_FORMAT).toString();
+
+      const task = this.chart.createTask({
+        name: "New task",
+        start,
+        end,
+      });
+
+      task.resizeStart(SIDES.right, event);
+
+      this.taskSpawnData.initialCall = false;
+    },
+
+    preventTaskSpawn() {
+      this.taskSpawnData = null;
     },
   },
 };
@@ -346,65 +340,5 @@ $timeunit-height: 30px;
   position: relative;
   width: 100%;
   height: 100%;
-
-  .task {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 40px;
-    min-width: 2px;
-    background-color: #69abe3;
-    opacity: 0.7;
-    cursor: move;
-    overflow: hidden;
-    border-radius: 2px;
-
-    .task-content {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      height: 100%;
-      width: 100%;
-      padding: 5px;
-      color: #333;
-      font-size: 0.8rem;
-      font-weight: bold;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-
-      .task-name {
-        font-size: 0.9rem;
-        font-weight: normal;
-        align-self: center;
-        color: #000;
-      }
-
-      .task-start {
-        font-size: 0.7rem;
-        font-weight: normal;
-      }
-    }
-
-    .resize-handle {
-      z-index: 1;
-      cursor: col-resize;
-      position: absolute;
-      width: 10px;
-      top: 0;
-      bottom: 0;
-      height: 100%;
-      cursor: col-resize;
-
-      &.left {
-        left: 0;
-      }
-
-      &.right {
-        right: 0;
-      }
-    }
-  }
 }
 </style>

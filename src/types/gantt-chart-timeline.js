@@ -197,8 +197,8 @@ export class GanttChartTimeline {
   }
 
   getDateFromPosition(x) {
-    const containerOffset = this.container.getBoundingClientRect().left;
-    const delta = x - containerOffset + this.scrollLeft;
+    const rectLeft = this.container.getBoundingClientRect().left;
+    const delta = x - rectLeft + this.scrollLeft;
 
     return this.getStartDate().add(
       delta / this.getPixelsPerSecond(),

@@ -65,6 +65,10 @@ export class Task {
     return this.y * RESOURCE_HEIGHT_PX;
   }
 
+  get interacting() {
+    return !this.interactionIs(TASK_INTERACTIONS.none);
+  }
+
   getStartDate(options) {
     const o = Object.assign(
       { format: DEFAULT_DATE_FORMAT, stringify: false },
@@ -188,9 +192,17 @@ export class Task {
     else if (snapToGrid) delta = parseInt(delta);
 
     if (side === SIDES.left) {
-      this.start = startOld + delta;
+      if (startOld + delta >= endOld) {
+        this.end = startOld + delta;
+      } else {
+        this.start = startOld + delta;
+      }
     } else if (side === SIDES.right) {
-      this.end = endOld + delta;
+      if (endOld + delta <= startOld) {
+        this.start = endOld + delta;
+      } else {
+        this.end = endOld + delta;
+      }
     }
   }
 
