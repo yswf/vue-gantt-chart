@@ -32,8 +32,7 @@ export class GanttChartTimeline {
     this.hour = 10;
     this.minute = 0;
 
-    this.getTimePeriod();
-    this.containerScrollToAction();
+    this.update();
   }
 
   get container() {
@@ -75,6 +74,15 @@ export class GanttChartTimeline {
         this.getPositionFromDate(this.getCurrentMoment()) -
         this.containerScrollbarThumbWidth;
     }, 25);
+  }
+
+  update() {
+    this.getTimePeriod();
+    this.containerScrollToAction();
+  }
+
+  updateDividers() {
+    Object.assign(this.timePeriodData, this.getDividers());
   }
 
   /* -------------------------------------------------------------------------- */
@@ -137,7 +145,7 @@ export class GanttChartTimeline {
     if (!TIME_PERIODS[timePeriod?.name]) return;
 
     this.timePeriod = timePeriod;
-    this.containerScrollToAction();
+    this.update();
   }
 
   /* -------------------------------------------------------------------------- */
@@ -206,8 +214,10 @@ export class GanttChartTimeline {
       totalWidth: widthsSum,
       primaryUnitWidth,
     };
-    const dividers = this.getDividers(data);
-    Object.assign(this.timePeriodData, data, dividers);
+    Object.assign(this.timePeriodData, data);
+
+    const dividers = this.getDividers();
+    Object.assign(this.timePeriodData, dividers);
 
     return this.timePeriodData;
   }
@@ -234,9 +244,9 @@ export class GanttChartTimeline {
     return range;
   }
 
-  getDividers(data) {
-    const primaryUnitWidth = data.primaryUnitWidth;
-    const totalWidth = data.totalWidth;
+  getDividers() {
+    const primaryUnitWidth = this.timePeriodData.primaryUnitWidth;
+    const totalWidth = this.timePeriodData.totalWidth;
 
     const vPrimaryAmount = Math.floor(totalWidth / primaryUnitWidth);
     const vSecondaryAmount = Math.floor(totalWidth / this.TIME_UNIT_WIDTH);

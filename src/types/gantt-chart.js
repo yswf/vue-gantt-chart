@@ -65,6 +65,7 @@ export class GanttChart {
       return;
     }
     this.resources.push(resource);
+    this.timeline.updateDividers();
   }
 
   removeResource(resource) {

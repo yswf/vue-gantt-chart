@@ -53,29 +53,31 @@
         @scroll="taskSpawnCancel"
         @mousedown="taskSpawnStart"
       >
-        <div class="gantt-timeunits-primary">
-          <div
-            class="gantt-timeunit-primary"
-            :style="{
-              width: `${unit.width}px`,
-              transform: `translateX(${unit.left}px)`,
-            }"
-            v-for="unit in timelineData.primary"
-            :key="unit.name"
-            v-text="unit.name"
-          ></div>
-        </div>
-        <div class="gantt-timeunits-secondary">
-          <div
-            class="gantt-timeunit-secondary"
-            :style="{ width: `${unit.width}px` }"
-            v-for="(unit, index) in timelineData.secondary"
-            :key="`time-unit-${unit.name}-${index}`"
-            v-text="unit.name"
-          ></div>
+        <div class="time">
+          <div class="gantt-timeunits-primary">
+            <div
+              class="gantt-timeunit-primary"
+              :style="{
+                width: `${unit.width}px`,
+                transform: `translateX(${unit.left}px)`,
+              }"
+              v-for="unit in timelineData.primary"
+              :key="unit.name"
+              v-text="unit.name"
+            ></div>
+          </div>
+          <div class="gantt-timeunits-secondary">
+            <div
+              class="gantt-timeunit-secondary"
+              :style="{ width: `${unit.width}px` }"
+              v-for="(unit, index) in timelineData.secondary"
+              :key="`time-unit-${unit.name}-${index}`"
+              v-text="unit.name"
+            ></div>
+          </div>
         </div>
 
-        <div class="dividers">
+        <div class="gantt-timeline-dividers">
           <div
             class="divider-v"
             :class="{ emphasize: divider.emphasize }"
@@ -160,12 +162,11 @@ export default {
     cssVars() {
       return {
         "--gantt-time-unit-width": `${this.timeline.TIME_UNIT_WIDTH}px`,
-        "--gantt-timeline-max-width": `${this.timelineMaxWidth}px`,
       };
     },
 
     timelineData() {
-      return this.timeline.getTimePeriod();
+      return this.timeline.timePeriodData;
     },
 
     filteredTasks() {
@@ -209,7 +210,9 @@ export default {
       },
     ];
 
-    const resources = [{ name: "Resource 1" }, { name: "Resource 2" }];
+    const resources = new Array(10).fill(0).map((_, index) => ({
+      name: `Resource ${index + 1}`,
+    }));
 
     resources.forEach((resource) => this.chart.createResource(resource));
     tasks.forEach((task) => this.chart.createTask(task));
@@ -333,7 +336,7 @@ export default {
 
 <style lang="scss" scoped>
 $timeunit-height: 30px;
-$timeline-dates-height: 48px;
+$timeline-dates-height: $timeunit-height * 2;
 
 .modal-task-spawn {
   display: flex;
@@ -364,7 +367,6 @@ $timeline-dates-height: 48px;
   display: flex;
   justify-self: flex-start;
   gap: 30px;
-  margin-left: 110px;
   margin-bottom: 20px;
 }
 
@@ -373,7 +375,6 @@ $timeline-dates-height: 48px;
   flex-direction: column;
   flex: 1;
   overflow: auto;
-  margin-left: 110px;
 }
 
 .gantt-chart {
@@ -383,7 +384,7 @@ $timeline-dates-height: 48px;
 
 .gantt-resources {
   padding-top: $timeline-dates-height;
-  width: 100px;
+  width: 220px;
   border: 1px solid #ccc;
   margin-bottom: 18px;
 
@@ -392,7 +393,16 @@ $timeline-dates-height: 48px;
     justify-content: center;
     align-items: center;
     height: 40px;
-    border: 1px solid #ccc;
+
+    box-sizing: border-box;
+
+    &:first-child {
+      border-top: 1px solid #ccc;
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid #ccc;
+    }
   }
 }
 
@@ -401,7 +411,6 @@ $timeline-dates-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: calc(min(100%, 800px));
   overflow: auto;
   border-top: 1px solid #ccc;
   border-right: 1px solid #ccc;
@@ -411,54 +420,21 @@ $timeline-dates-height: 48px;
     max-width: 10px;
   }
 
-  .dividers {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-
-    .divider-v,
-    .divider-h {
-      position: absolute;
-      background-color: #f7f7f7;
-      z-index: -1;
-
-      &.emphasize {
-        background-color: #eee;
-      }
-    }
-
-    .divider-v {
-      width: 1px;
-      height: 100%;
-      top: $timeline-dates-height;
-
-      &.emphasize {
-        top: 0;
-      }
-    }
-
-    .divider-h {
-      left: 0;
-      top: $timeline-dates-height;
-      height: 1px;
-      width: 100%;
-    }
+  .time {
+    height: $timeline-dates-height;
   }
 
   .gantt-timeunits-primary {
     position: relative;
-    height: $timeunit-height;
     width: 100%;
+    height: $timeunit-height;
+    line-height: $timeunit-height;
 
     .gantt-timeunit-primary {
       position: absolute;
       text-align: center;
       height: 30px;
       box-sizing: border-box;
-
-      &:not(:last-child) {
-        border-right: 1px solid #eee;
-      }
     }
   }
 
@@ -482,6 +458,44 @@ $timeline-dates-height: 48px;
         border-right: 1px solid #eee;
       }
     }
+  }
+}
+
+.gantt-timeline-dividers {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+
+  .divider-v,
+  .divider-h {
+    position: absolute;
+    background-color: #f7f7f7;
+    z-index: -1;
+
+    &.emphasize {
+      background-color: #eee;
+    }
+  }
+
+  .divider-v {
+    width: 1px;
+    height: 100%;
+    top: $timeline-dates-height;
+
+    &.emphasize {
+      top: 0;
+    }
+
+    &:not(.emphasize) {
+      height: calc(100% - #{$timeline-dates-height});
+    }
+  }
+
+  .divider-h {
+    left: 0;
+    top: $timeline-dates-height;
+    height: 1px;
+    width: 100%;
   }
 }
 
