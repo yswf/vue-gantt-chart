@@ -24,6 +24,9 @@ export class GanttChartTimeline {
     this.day = 13;
     this.hour = 10;
     this.minute = 0;
+
+    this.getTimePeriod();
+    this.containerScrollToAction();
   }
 
   get container() {
@@ -49,6 +52,27 @@ export class GanttChartTimeline {
 
     return scrollBarArea * viewableRatio;
   }
+
+  containerScrollToAction() {
+    if (!this.container) return;
+
+    //? why is timeouts needed?
+    //? when we set scrollLeft property of an element,
+    //? it seems to be setting the width somehow relative
+    //? to the total width (scrollWidth property) of a scrollable element.
+    //? As scrollWidth property is read-only, we need to wait
+    //? for DOM to update and re-calculate the scrollWidth,
+    //? then we can properly set the scrollLeft.
+    setTimeout(() => {
+      this.scrollLeft =
+        this.getPositionFromDate(this.getCurrentMoment()) -
+        this.containerScrollbarThumbWidth;
+    }, 25);
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                             time period methods                            */
+  /* -------------------------------------------------------------------------- */
 
   getPrimaryUnit() {
     return this.timePeriodData.primary.unit || "days";
@@ -92,7 +116,7 @@ export class GanttChartTimeline {
     );
   }
 
-  changeTimePeriod(offset = 1) {
+  setTimePeriodOffset(offset = 1) {
     const keys = Object.keys(TIME_PERIODS);
     const currentTimePeriodIndex = keys.indexOf(this.timePeriod.name);
     const newPeriod = TIME_PERIODS[keys[currentTimePeriodIndex + offset]];
@@ -106,7 +130,12 @@ export class GanttChartTimeline {
     if (!TIME_PERIODS[timePeriod?.name]) return;
 
     this.timePeriod = timePeriod;
+    this.containerScrollToAction();
   }
+
+  /* -------------------------------------------------------------------------- */
+  /*                            main timeline methods                           */
+  /* -------------------------------------------------------------------------- */
 
   getTimePeriod(period) {
     period = period || this.timePeriod;
@@ -135,7 +164,7 @@ export class GanttChartTimeline {
       this.TIME_UNIT_WIDTH * secondaryUnitsPerPrimaryUnit;
     let widthsSum = 0;
     for (const item of source) {
-      const name = item.format(primaryFormat).toString();
+      const name = item.format(primaryFormat);
       const width = primaryUnitWidth;
 
       primary.push({
@@ -156,7 +185,7 @@ export class GanttChartTimeline {
 
     const secondary = [];
     for (const item of source) {
-      const name = item.format(secondaryFormat).toString();
+      const name = item.format(secondaryFormat);
 
       secondary.push({
         name,
@@ -168,26 +197,34 @@ export class GanttChartTimeline {
       primary,
       secondary,
       totalWidth: widthsSum,
-      primaryUnitWidth,
     };
-
-    //! temporary solution
-    //? what is this?
-    //? when we set scrollLeft property of an element,
-    //? it seems to be setting the width somehow relative
-    //? to the scrollWidth property of the element.
-    //? As scrollWidth property is read-only, we need to wait
-    //? for DOM to update, and re-calculate the scrollWidth,
-    //? then we can properly set the scrollLeft.
-    setTimeout(() => {
-      if (!this.container) return;
-      this.scrollLeft =
-        this.getPositionFromDate(this.getCurrentMoment()) -
-        this.containerScrollbarThumbWidth;
-    }, 25);
 
     return this.timePeriodData;
   }
+
+  static getTimeRange(start, end, type, options = {}) {
+    const step = options.step || 1;
+    const format = options.format || null;
+    const stringify = options.stringify || false;
+
+    const startDate = !(start instanceof moment) ? moment(start) : start;
+    const endDate = !(end instanceof moment) ? moment(end) : end;
+
+    let diff = endDate.diff(startDate, type);
+    if (diff < 0) return [];
+
+    let range = [];
+    for (let i = 0; i < diff; i += step) {
+      let date = moment(startDate).add(i, type);
+      if (format) date = date.format(format);
+      if (stringify) date = date.toString();
+      range.push(date);
+    }
+
+    return range;
+  }
+
+  /* -------------------- pixel to date relativity methods -------------------- */
 
   getPixelsPerSecond() {
     return (
@@ -213,27 +250,9 @@ export class GanttChartTimeline {
     return diff * pps;
   }
 
-  static getTimeRange(start, end, type, options = {}) {
-    const step = options.step || 1;
-    const format = options.format || null;
-    const stringify = options.stringify || false;
-
-    const startDate = !(start instanceof moment) ? moment(start) : start;
-    const endDate = !(end instanceof moment) ? moment(end) : end;
-
-    let diff = endDate.diff(startDate, type);
-    if (diff < 0) return [];
-
-    let range = [];
-    for (let i = 0; i < diff; i += step) {
-      let date = moment(startDate).add(i, type);
-      if (format) date = date.format(format);
-      if (stringify) date = date.toString();
-      range.push(date);
-    }
-
-    return range;
-  }
+  /* -------------------------------------------------------------------------- */
+  /*                                misc methods                                */
+  /* -------------------------------------------------------------------------- */
 
   toJSON() {
     return {
@@ -244,5 +263,9 @@ export class GanttChartTimeline {
       hour: this.hour,
       minute: this.minute,
     };
+  }
+
+  static fromJSON(json) {
+    return new GanttChartTimeline(json);
   }
 }

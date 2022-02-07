@@ -2,11 +2,11 @@
   <div
     class="task"
     :class="{
-      interacting: task.interacting,
+      interacting: task.isInteracted(),
     }"
     :style="{
-      width: `${task.width}px`,
-      transform: `translate(${task.left}px, ${task.top}px)`,
+      width: `${task.getWidth()}px`,
+      transform: `translate(${task.getLeft()}px, ${task.top}px)`,
       ...task.style,
     }"
     @mousedown.prevent.stop="task.moveStart($event)"
@@ -20,7 +20,7 @@
       <div
         class="task-start"
         v-text="
-          `Start: ${task.startToString()} | Duration: ${task.durationToString()}`
+          `Start: ${task.getStartString()} | Duration: ${task.getDurationString()}`
         "
       ></div>
     </div>

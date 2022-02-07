@@ -1,9 +1,6 @@
 <template>
   <div class="gantt-modal-wrapper" v-if="modal.shown">
-    <div
-      class="gantt-modal"
-      :style="{ transform: `translate(${modal.left}px, ${modal.top}px)` }"
-    >
+    <div class="gantt-modal">
       <h3 class="title" v-if="modal.title" v-text="modal.title"></h3>
       <slot></slot>
     </div>

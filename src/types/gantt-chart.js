@@ -22,6 +22,10 @@ export class GanttChart {
     this.timeline = new GanttChartTimeline({ chart: this });
   }
 
+  /* -------------------------------------------------------------------------- */
+  /*                                tasks methods                               */
+  /* -------------------------------------------------------------------------- */
+
   createTask(data) {
     const task = new Task(Object.assign({}, data, { chart: this }));
     this.addTask(task);
@@ -43,6 +47,10 @@ export class GanttChart {
     this.tasks = arrayRemove(this.tasks, task);
   }
 
+  /* -------------------------------------------------------------------------- */
+  /*                              resources methods                             */
+  /* -------------------------------------------------------------------------- */
+
   createResource(data) {
     const resource = new Resource(Object.assign({}, data, { chart: this }));
     this.addResource(resource);
@@ -63,6 +71,10 @@ export class GanttChart {
     this.resources = arrayRemove(this.resources, resource);
   }
 
+  /* -------------------------------------------------------------------------- */
+  /*                              settings methods                              */
+  /* -------------------------------------------------------------------------- */
+
   setSettings(settings) {
     for (const key in settings) {
       if (Object.prototype.hasOwnProperty.call(this.settings, key)) {
@@ -77,6 +89,10 @@ export class GanttChart {
     }
     return def;
   }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                misc methods                                */
+  /* -------------------------------------------------------------------------- */
 
   toJSON() {
     return {

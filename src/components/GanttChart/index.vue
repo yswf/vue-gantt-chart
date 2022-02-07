@@ -96,11 +96,9 @@ import Task from "./Task.vue";
 import Modal from "./Modal.vue";
 
 import { SIDES } from "@/constants";
+import { DEFAULT_DATE_FORMAT } from "../../constants";
 
 import { mapState, mapActions, mapGetters } from "vuex";
-import { DEFAULT_DATE_FORMAT } from "../../constants";
-import { Resource } from "../../types/resource";
-
 import moment from "moment";
 
 export default {
@@ -145,11 +143,11 @@ export default {
     },
 
     timelineData() {
-      return this.timeline.getTimePeriod();
+      return this.timeline.timePeriodData;
     },
 
     filteredTasks() {
-      return this.tasks.filter((task) => task.visible);
+      return this.tasks.filter((task) => task.isVisible());
     },
 
     selectedTimePeriod: {
@@ -189,25 +187,19 @@ export default {
       },
     ];
 
-    const resources = [
-      new Resource({
-        name: "Resource 1",
-      }),
-    ];
+    const resources = [{ name: "Resource 1" }, { name: "Resource 2" }];
 
-    resources.forEach((resource) => this.addResource(resource));
-    tasks.forEach((task) => this.createTask(task));
+    resources.forEach((resource) => this.chart.createResource(resource));
+    tasks.forEach((task) => this.chart.createTask(task));
   },
 
   methods: {
     ...mapActions("ganttChart", {
-      createTask: "createTask",
-      addResource: "addResource",
       setSettings: "setSettings",
     }),
 
     newResource() {
-      this.addResource(new Resource({ name: "New resource" }));
+      this.chart.createResource({ name: "New resource" });
     },
 
     scale(event) {
@@ -217,9 +209,9 @@ export default {
       const delta = event.deltaY;
 
       if (delta > 0) {
-        this.timeline.changeTimePeriod(1);
+        this.timeline.setTimePeriodOffset(1);
       } else {
-        this.timeline.changeTimePeriod(-1);
+        this.timeline.setTimePeriodOffset(-1);
       }
     },
 
@@ -287,8 +279,8 @@ export default {
       Object.assign(this.taskSpawnModalData, {
         shown: true,
         taskName: task.name,
-        taskStart: task.startToString(),
-        taskEnd: task.endToString(),
+        taskStart: task.getStartString(),
+        taskEnd: task.getEndString(),
       });
     },
 

@@ -40,68 +40,78 @@ export class Task {
     this.eventsMeta = {};
   }
 
-  get duration() {
-    return this.end - this.start;
-  }
+  /* -------------------------------------------------------------------------- */
+  /*                              position methods                              */
+  /* -------------------------------------------------------------------------- */
 
-  get width() {
-    const width = this.duration * this.getPixelsPerSecond();
+  getWidth() {
+    const width = this.getDuration() * this.getPixelsPerSecond();
     const scrollWidth = this.chart.timeline.scrollWidth;
-    return width + this.left > scrollWidth ? scrollWidth - this.left : width;
+    return width + this.getLeft() > scrollWidth
+      ? scrollWidth - this.getLeft()
+      : width;
   }
 
-  get left() {
+  getLeft() {
     return this.chart.timeline.getPositionFromDate(moment.unix(this.start));
-  }
-
-  get visible() {
-    return (
-      this.left + this.width >= 0 &&
-      this.left <= this.chart.timeline.scrollWidth
-    );
   }
 
   get top() {
     return this.y * RESOURCE_HEIGHT_PX;
   }
 
-  get interacting() {
+  /* -------------------------------------------------------------------------- */
+  /*                                state methods                               */
+  /* -------------------------------------------------------------------------- */
+
+  isInteracted() {
     return !this.interactionIs(TASK_INTERACTIONS.none);
   }
 
-  startToString() {
+  isVisible() {
+    return (
+      this.getLeft() + this.getWidth() >= 0 &&
+      this.getLeft() <= this.chart.timeline.scrollWidth
+    );
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                time methods                                */
+  /* -------------------------------------------------------------------------- */
+
+  getDuration() {
+    return this.end - this.start;
+  }
+
+  getStartString() {
     return moment.unix(this.start).format(DEFAULT_DATE_FORMAT);
   }
 
-  endToString() {
+  getEndString() {
     return moment.unix(this.end).format(DEFAULT_DATE_FORMAT);
   }
 
-  durationToString() {
-    const duration = moment.duration(this.duration, "seconds");
+  getDurationString() {
+    const duration = moment.duration(this.getDuration(), "seconds");
     const years = duration.years();
     const months = duration.months();
     const days = duration.days();
     const hours = duration.hours();
     const minutes = duration.minutes();
 
-    if (years) return `${years} years`;
-    if (months) return `${months} months`;
-    if (days) return `${days} days`;
-    if (hours) return `${hours} hours`;
-    return `${minutes} minutes`;
+    if (years) return `${years}y`;
+    if (months) return `${months}mo`;
+    if (days) return `${days}d`;
+    if (hours) return `${hours}h`;
+    return `${minutes}m`;
   }
 
-  getPixelsPerSecond() {
-    return this.chart.timeline.getPixelsPerSecond();
-  }
+  /* -------------------------------------------------------------------------- */
+  /*                            interaction methods                             */
+  /* -------------------------------------------------------------------------- */
 
   interactionIs(interaction) {
     return this.interaction === interaction;
-  }
-
-  remove() {
-    this.chart.removeTask(this);
   }
 
   setInteraction(interaction) {
@@ -123,38 +133,11 @@ export class Task {
     return true;
   }
 
-  setStart(day) {
-    if (day < 0 || day > this.end) {
-      if (this.chart.settings.verbose) {
-        console.warn(
-          this.say(
-            `start day ${day} is out of bound\n`,
-            `start day must be between 1 and ${this.end}`
-          )
-        );
-      }
-
-      return;
-    }
-
-    this.start = Number(day);
+  getPixelsPerSecond() {
+    return this.chart.timeline.getPixelsPerSecond();
   }
 
-  setEnd(day) {
-    if (day < this.start || day > moment().daysInMonth()) {
-      if (this.chart.settings.verbose) {
-        console.warn(this.say(`end day ${day} is out of bound`));
-      }
-
-      return;
-    }
-
-    this.end = Number(day);
-  }
-
-  setY(y) {
-    this.y = Number(y);
-  }
+  /* -------------------------------- resize -------------------------------- */
 
   resizeStart(side, event, options = {}) {
     const interactionSet = this.setInteraction(TASK_INTERACTIONS.resize);
@@ -228,6 +211,8 @@ export class Task {
     this.setInteraction(TASK_INTERACTIONS.none);
   }
 
+  /* ---------------------------------- move ---------------------------------- */
+
   moveStart(event) {
     this.setInteraction(TASK_INTERACTIONS.move);
 
@@ -286,18 +271,26 @@ export class Task {
 
     this.start = startOld + deltaTime;
     this.end = endOld + deltaTime;
-    this.setY(yOld + deltaResources);
+    this.y = yOld + deltaResources;
   }
 
   moveEnd() {
     if (!this.interactionIs(TASK_INTERACTIONS.move)) return;
 
     const { snapToGrid } = this.eventsMeta["moveStart"];
-    if (!snapToGrid) this.setY(Math.round(this.y));
+    if (!snapToGrid) this.y = Math.round(this.y);
 
     window.removeEventListener("mousemove", this.methodsRefs["move"]);
     delete this.eventsMeta["moveStart"];
     this.setInteraction(TASK_INTERACTIONS.none);
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                misc methods                                */
+  /* -------------------------------------------------------------------------- */
+
+  remove() {
+    this.chart.removeTask(this);
   }
 
   say(...args) {
