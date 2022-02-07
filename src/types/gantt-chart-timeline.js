@@ -1,6 +1,7 @@
 import {
   DEFAULT_DATE_FORMAT,
   DEFAULT_TIME_UNIT_WIDTH,
+  RESOURCE_HEIGHT_PX,
   TIME_PERIODS,
 } from "../constants";
 import { uuidv4 } from "@/utils";
@@ -15,7 +16,13 @@ export class GanttChartTimeline {
 
     this.id = `gantt-timeline-${uuidv4()}`;
     this.timePeriod = clone.timePeriod || TIME_PERIODS.days;
-    this.timePeriodData = null;
+    this.timePeriodData = {
+      primary: [],
+      secondary: [],
+      totalWidth: 0,
+      dividersV: [],
+      dividersH: [],
+    };
 
     this.TIME_UNIT_WIDTH = DEFAULT_TIME_UNIT_WIDTH;
 
@@ -193,11 +200,14 @@ export class GanttChartTimeline {
       });
     }
 
-    this.timePeriodData = {
+    const data = {
       primary,
       secondary,
       totalWidth: widthsSum,
+      primaryUnitWidth,
     };
+    const dividers = this.getDividers(data);
+    Object.assign(this.timePeriodData, data, dividers);
 
     return this.timePeriodData;
   }
@@ -222,6 +232,48 @@ export class GanttChartTimeline {
     }
 
     return range;
+  }
+
+  getDividers(data) {
+    const primaryUnitWidth = data.primaryUnitWidth;
+    const totalWidth = data.totalWidth;
+
+    const vPrimaryAmount = Math.floor(totalWidth / primaryUnitWidth);
+    const vSecondaryAmount = Math.floor(totalWidth / this.TIME_UNIT_WIDTH);
+    const dividersV = {};
+
+    for (let i = 0; i < vPrimaryAmount; i++) {
+      const left = i * primaryUnitWidth;
+      dividersV[left] = {
+        left,
+        emphasize: true,
+      };
+    }
+
+    for (let i = 0; i < vSecondaryAmount; i++) {
+      const left = i * this.TIME_UNIT_WIDTH;
+      if (dividersV[left]) continue;
+
+      dividersV[left] = {
+        left,
+      };
+    }
+
+    const hAmount = this.chart.resources.length;
+    const dividersH = [];
+
+    for (let i = 1; i <= hAmount; i++) {
+      const top = i * RESOURCE_HEIGHT_PX;
+      dividersH.push({
+        top,
+        emphasize: true,
+      });
+    }
+
+    return {
+      dividersV: Object.values(dividersV),
+      dividersH,
+    };
   }
 
   /* -------------------- pixel to date relativity methods -------------------- */

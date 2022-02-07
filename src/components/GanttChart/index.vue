@@ -74,6 +74,28 @@
             v-text="unit.name"
           ></div>
         </div>
+
+        <div class="dividers">
+          <div
+            class="divider-v"
+            :class="{ emphasize: divider.emphasize }"
+            v-for="divider in timelineData.dividersV"
+            :key="`dv-${divider.left}`"
+            :style="{
+              transform: `translateX(${divider.left}px)`,
+            }"
+          ></div>
+          <div
+            class="divider-h"
+            :class="{ emphasize: divider.emphasize }"
+            v-for="divider in timelineData.dividersH"
+            :key="`dh-${divider.top}`"
+            :style="{
+              width: `${timelineData.totalWidth}px`,
+              transform: `translateY(${divider.top}px)`,
+            }"
+          ></div>
+        </div>
         <div class="tasks">
           <Task
             v-for="task in filteredTasks"
@@ -143,7 +165,7 @@ export default {
     },
 
     timelineData() {
-      return this.timeline.timePeriodData;
+      return this.timeline.getTimePeriod();
     },
 
     filteredTasks() {
@@ -311,6 +333,7 @@ export default {
 
 <style lang="scss" scoped>
 $timeunit-height: 30px;
+$timeline-dates-height: 48px;
 
 .modal-task-spawn {
   display: flex;
@@ -359,7 +382,7 @@ $timeunit-height: 30px;
 }
 
 .gantt-resources {
-  padding-top: 42px;
+  padding-top: $timeline-dates-height;
   width: 100px;
   border: 1px solid #ccc;
   margin-bottom: 18px;
@@ -374,6 +397,7 @@ $timeunit-height: 30px;
 }
 
 .gantt-timeline {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -387,6 +411,40 @@ $timeunit-height: 30px;
     max-width: 10px;
   }
 
+  .dividers {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+
+    .divider-v,
+    .divider-h {
+      position: absolute;
+      background-color: #f7f7f7;
+      z-index: -1;
+
+      &.emphasize {
+        background-color: #eee;
+      }
+    }
+
+    .divider-v {
+      width: 1px;
+      height: 100%;
+      top: $timeline-dates-height;
+
+      &.emphasize {
+        top: 0;
+      }
+    }
+
+    .divider-h {
+      left: 0;
+      top: $timeline-dates-height;
+      height: 1px;
+      width: 100%;
+    }
+  }
+
   .gantt-timeunits-primary {
     position: relative;
     height: $timeunit-height;
@@ -396,6 +454,11 @@ $timeunit-height: 30px;
       position: absolute;
       text-align: center;
       height: 30px;
+      box-sizing: border-box;
+
+      &:not(:last-child) {
+        border-right: 1px solid #eee;
+      }
     }
   }
 
@@ -413,7 +476,11 @@ $timeunit-height: 30px;
       color: #999;
       box-sizing: border-box;
 
-      border: 1px solid #eee;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+      &:not(:last-child) {
+        border-right: 1px solid #eee;
+      }
     }
   }
 }

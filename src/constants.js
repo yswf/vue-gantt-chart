@@ -94,7 +94,7 @@ export const TIME_PERIODS = {
     primary: {
       unit: "months",
       format: "MMM YYYY",
-      secondaryPerUnit: 4.345,
+      secondaryPerUnit: 4,
     },
     secondary: {
       unit: "weeks",

@@ -61,7 +61,7 @@ export default {
   justify-content: center;
   height: 40px;
   min-width: 2px;
-  opacity: 0.7;
+  opacity: 1;
   cursor: move;
   overflow: hidden;
   border-radius: 2px;
@@ -70,7 +70,7 @@ export default {
   padding: 5px;
 
   &.interacting {
-    opacity: 1;
+    opacity: 0.7;
     pointer-events: none;
   }
 
