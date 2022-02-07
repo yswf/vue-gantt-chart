@@ -102,6 +102,10 @@ export class Task {
     return this.interaction === interaction;
   }
 
+  remove() {
+    this.chart.removeTask(this);
+  }
+
   setInteraction(interaction) {
     if (
       this.interaction != TASK_INTERACTIONS.none &&
@@ -139,7 +143,6 @@ export class Task {
   }
 
   setEnd(day) {
-    // moment current month length
     if (day < this.start || day > moment().daysInMonth()) {
       if (this.chart.settings.verbose) {
         console.warn(this.say(`end day ${day} is out of bound`));
@@ -155,11 +158,13 @@ export class Task {
     this.y = Number(y);
   }
 
-  resizeStart(side, event) {
-    const set = this.setInteraction(TASK_INTERACTIONS.resize);
-    if (!set) return;
+  resizeStart(side, event, options = {}) {
+    const interactionSet = this.setInteraction(TASK_INTERACTIONS.resize);
+    if (!interactionSet) return;
 
     const snapToGrid = this.chart.getSetting("snapToGrid", false);
+
+    const resizeEndCallback = options?.resizeEndCallback || null;
 
     this.eventsMeta["resizeStart"] = {
       side,
@@ -167,6 +172,7 @@ export class Task {
       startX: event.clientX,
       startOld: this.start,
       endOld: this.end,
+      resizeEndCallback,
     };
 
     this.methodsRefs["resize"] = this.resize.bind(this);
@@ -188,8 +194,8 @@ export class Task {
       this.eventsMeta["resizeStart"];
 
     let delta = (event.clientX - startX) / this.getPixelsPerSecond();
-    if (snapToGrid && Math.abs(delta) < 1) return;
-    else if (snapToGrid) delta = parseInt(delta);
+    // if (snapToGrid && Math.abs(delta) < 1) return;
+    // else if (snapToGrid) delta = parseInt(delta);
 
     if (side === SIDES.left) {
       if (startOld + delta >= endOld) {
@@ -215,6 +221,9 @@ export class Task {
     //   this.setStart(Math.round(this.start));
     //   this.setEnd(Math.round(this.end));
     // }
+
+    const { resizeEndCallback } = this.eventsMeta["resizeStart"];
+    if (typeof resizeEndCallback === "function") resizeEndCallback();
 
     window.removeEventListener("mousemove", this.methodsRefs["resize"]);
     delete this.eventsMeta["resizeStart"];

@@ -63,11 +63,11 @@ export default {
   justify-content: center;
   height: 40px;
   min-width: 2px;
-  background-color: #69abe3;
   opacity: 0.7;
   cursor: move;
   overflow: hidden;
-  border-radius: 2px;
+  padding: 1px 0;
+  box-sizing: border-box;
 
   &.interacting {
     opacity: 1;
@@ -80,13 +80,16 @@ export default {
     justify-content: center;
     height: 100%;
     width: 100%;
-    padding: 5px;
     color: #333;
     font-size: 0.8rem;
     font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    border-radius: 2px;
+    padding: 4px 5px;
+    box-sizing: border-box;
+    background-color: #69abe3;
 
     .task-name {
       font-size: 0.9rem;

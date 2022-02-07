@@ -1,5 +1,22 @@
 <template>
   <div class="gantt-chart-wrapper">
+    <Modal :modal="taskSpawnModalData">
+      <div class="modal-task-spawn">
+        <input type="text" v-model="taskSpawnModalData.taskName" />
+        <input type="text" v-model="taskSpawnModalData.taskStart" />
+        <input type="text" v-model="taskSpawnModalData.taskEnd" />
+        <div class="actions">
+          <button
+            @click="(taskSpawnModalData.shown = false), spawnTaskCancel()"
+          >
+            Cancel
+          </button>
+          <button @click="(taskSpawnModalData.shown = false), spawnTaskEnd()">
+            Save
+          </button>
+        </div>
+      </div>
+    </Modal>
     <div class="gantt-chart-controls">
       <span>
         <input type="checkbox" v-model="snapToGrid" id="snap-mode" />
@@ -39,7 +56,7 @@
       <div
         class="gantt-timeline"
         :id="timeline.id"
-        @scroll="preventTaskSpawn"
+        @scroll="spawnTaskCancel"
         @mousedown="taskSpawnStart"
       >
         <div class="gantt-timeunits-primary">
@@ -82,6 +99,7 @@
 
 <script>
 import Task from "./Task.vue";
+import Modal from "./Modal.vue";
 
 import { SIDES } from "@/constants";
 
@@ -89,10 +107,13 @@ import { mapState, mapActions, mapGetters } from "vuex";
 import { DEFAULT_DATE_FORMAT } from "../../constants";
 import { Resource } from "../../types/resource";
 
+import moment from "moment";
+
 export default {
   name: "GanttChart",
 
   components: {
+    Modal,
     Task,
   },
 
@@ -154,6 +175,14 @@ export default {
       SIDES,
 
       taskSpawnData: null,
+      taskSpawnModalData: {
+        shown: false,
+        title: "Edit task data",
+
+        taskName: "",
+        taskStart: "",
+        taskEnd: "",
+      },
     };
   },
 
@@ -200,22 +229,24 @@ export default {
       }
     },
 
+    //? Why use mousemove instead of mousedown/mouseup?
+    //? I used mousemove event to trigger task spawning
+    //? to prevent spawning tasks when scrolling the timeline.
+    //? This is what spawnTaskCancel() method does,
+    //? it is called on @scroll event of timeline,
+    //? and it cancels task spawning.
     taskSpawnStart(event) {
       const date = this.timeline.getDateFromPosition(event.clientX);
 
       this.taskSpawnData = {
         initialCall: true,
         date,
-        event,
       };
 
       document.addEventListener("mousemove", this.taskSpawn);
       document.addEventListener(
         "mouseup",
-        () => {
-          window.removeEventListener("mousemove", this.taskSpawn);
-          this.taskSpawnData = null;
-        },
+        () => window.removeEventListener("mousemove", this.taskSpawn),
         { once: true }
       );
     },
@@ -233,12 +264,37 @@ export default {
         end,
       });
 
-      task.resizeStart(SIDES.right, event);
+      this.taskSpawnData.task = task;
+
+      task.resizeStart(SIDES.right, event, {
+        resizeEndCallback: () => {
+          Object.assign(this.taskSpawnModalData, {
+            shown: true,
+            taskName: task.name,
+            taskStart: start,
+            taskEnd: end,
+          });
+        },
+      });
 
       this.taskSpawnData.initialCall = false;
     },
 
-    preventTaskSpawn() {
+    spawnTaskEnd() {
+      const modalData = this.taskSpawnModalData;
+
+      this.taskSpawnData.task.name = modalData.taskName;
+      this.taskSpawnData.task.start = moment(modalData.taskStart).unix();
+      this.taskSpawnData.task.end = moment(modalData.taskEnd).unix();
+
+      this.taskSpawnData = null;
+    },
+
+    spawnTaskCancel() {
+      if (this.taskSpawnData?.task) {
+        this.taskSpawnData.task.remove();
+      }
+
       this.taskSpawnData = null;
     },
   },
@@ -247,6 +303,24 @@ export default {
 
 <style lang="scss" scoped>
 $timeunit-height: 30px;
+
+.modal-task-spawn {
+  display: flex;
+  flex-direction: column;
+
+  .actions {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 10px;
+    gap: 30px;
+  }
+
+  input {
+    width: 200px;
+    margin-bottom: 10px;
+  }
+}
 
 .gantt-chart-wrapper {
   display: flex;
