@@ -64,8 +64,10 @@ export default {
   opacity: 0.7;
   cursor: move;
   overflow: hidden;
-  padding: 1px 0;
+  border-radius: 2px;
   box-sizing: border-box;
+  background-color: #69abe3;
+  padding: 5px;
 
   &.interacting {
     opacity: 1;
@@ -84,10 +86,6 @@ export default {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border-radius: 2px;
-    padding: 4px 5px;
-    box-sizing: border-box;
-    background-color: #69abe3;
 
     .task-name {
       font-size: 0.9rem;
