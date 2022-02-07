@@ -6,14 +6,8 @@
         <input type="text" v-model="taskSpawnModalData.taskStart" />
         <input type="text" v-model="taskSpawnModalData.taskEnd" />
         <div class="actions">
-          <button
-            @click="(taskSpawnModalData.shown = false), spawnTaskCancel()"
-          >
-            Cancel
-          </button>
-          <button @click="(taskSpawnModalData.shown = false), spawnTaskEnd()">
-            Save
-          </button>
+          <button @click="spawnTaskModalActionCancel">Cancel</button>
+          <button @click="spawnTaskModalActionSave">Save</button>
         </div>
       </div>
     </Modal>
@@ -56,7 +50,7 @@
       <div
         class="gantt-timeline"
         :id="timeline.id"
-        @scroll="spawnTaskCancel"
+        @scroll="taskSpawnCancel"
         @mousedown="taskSpawnStart"
       >
         <div class="gantt-timeunits-primary">
@@ -117,6 +111,22 @@ export default {
     Task,
   },
 
+  data() {
+    return {
+      SIDES,
+
+      taskSpawnData: null,
+      taskSpawnModalData: {
+        shown: false,
+        title: "Edit task data",
+
+        taskName: "",
+        taskStart: "",
+        taskEnd: "",
+      },
+    };
+  },
+
   computed: {
     ...mapState("ganttChart", { chart: "chart" }),
     ...mapGetters("ganttChart", {
@@ -170,22 +180,6 @@ export default {
     },
   },
 
-  data() {
-    return {
-      SIDES,
-
-      taskSpawnData: null,
-      taskSpawnModalData: {
-        shown: false,
-        title: "Edit task data",
-
-        taskName: "",
-        taskStart: "",
-        taskEnd: "",
-      },
-    };
-  },
-
   mounted() {
     const tasks = [
       {
@@ -229,30 +223,30 @@ export default {
       }
     },
 
+    /* -------------------------------------------------------------------------- */
+    /*                             task spawn handlers                            */
+    /* -------------------------------------------------------------------------- */
+
     //? Why use mousemove instead of mousedown/mouseup?
     //? I used mousemove event to trigger task spawning
     //? to prevent spawning tasks when scrolling the timeline.
-    //? This is what spawnTaskCancel() method does,
+    //? This is what taskSpawnCancel() method does,
     //? it is called on @scroll event of timeline,
     //? and it cancels task spawning.
     taskSpawnStart(event) {
       const date = this.timeline.getDateFromPosition(event.clientX);
 
       this.taskSpawnData = {
-        initialCall: true,
+        firstCall: true,
         date,
       };
 
       document.addEventListener("mousemove", this.taskSpawn);
-      document.addEventListener(
-        "mouseup",
-        () => window.removeEventListener("mousemove", this.taskSpawn),
-        { once: true }
-      );
+      document.addEventListener("mouseup", this.taskSpawnEnd, { once: true });
     },
 
     taskSpawn(event) {
-      if (!this.taskSpawnData?.initialCall) return;
+      if (!this.taskSpawnData?.firstCall) return;
 
       const date = this.taskSpawnData.date;
       const start = date.format(DEFAULT_DATE_FORMAT).toString();
@@ -267,33 +261,55 @@ export default {
       this.taskSpawnData.task = task;
 
       task.resizeStart(SIDES.right, event, {
-        resizeEndCallback: () => {
-          Object.assign(this.taskSpawnModalData, {
-            shown: true,
-            taskName: task.name,
-            taskStart: task.startToString(),
-            taskEnd: task.endToString(),
-          });
-        },
+        resizeEndCallback: this.spawnTaskModalShow,
       });
 
-      this.taskSpawnData.initialCall = false;
+      this.taskSpawnData.firstCall = false;
     },
 
-    spawnTaskEnd() {
+    taskSpawnEnd() {
+      window.removeEventListener("mousemove", this.taskSpawn);
+      if (this.taskSpawnData?.firstCall) this.taskSpawnCancel();
+    },
+
+    taskSpawnCancel() {
+      if (this.taskSpawnData?.task) {
+        this.taskSpawnData.task.remove();
+      }
+
+      this.taskSpawnData = null;
+    },
+
+    spawnTaskModalShow() {
+      const task = this.taskSpawnData?.task;
+      if (!task) return;
+
+      Object.assign(this.taskSpawnModalData, {
+        shown: true,
+        taskName: task.name,
+        taskStart: task.startToString(),
+        taskEnd: task.endToString(),
+      });
+    },
+
+    /* -------------------------------------------------------------------------- */
+    /*                               modals actions                               */
+    /* -------------------------------------------------------------------------- */
+
+    spawnTaskModalActionCancel() {
+      this.taskSpawnModalData.shown = false;
+
+      this.taskSpawnCancel();
+    },
+
+    spawnTaskModalActionSave() {
+      this.taskSpawnModalData.shown = false;
+
       const modalData = this.taskSpawnModalData;
 
       this.taskSpawnData.task.name = modalData.taskName;
       this.taskSpawnData.task.start = moment(modalData.taskStart).unix();
       this.taskSpawnData.task.end = moment(modalData.taskEnd).unix();
-
-      this.taskSpawnData = null;
-    },
-
-    spawnTaskCancel() {
-      if (this.taskSpawnData?.task) {
-        this.taskSpawnData.task.remove();
-      }
 
       this.taskSpawnData = null;
     },
