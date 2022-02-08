@@ -1,6 +1,6 @@
 # Gantt chart
 
-This is an implementation of a [Gantt chart](https://en.wikipedia.org/wiki/Gantt_chart) scheduler using [Vue.js](https://vuejs.org/)
+This is an implementation of a [Gantt chart](https://en.wikipedia.org/wiki/Gantt_chart) using [Vue.js](https://vuejs.org/)
 
 ## [Demo](https://sarmerer.github.io/vue-gantt-chart/)
 
