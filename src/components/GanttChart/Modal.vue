@@ -1,6 +1,6 @@
 <template>
   <div class="gantt-modal-wrapper" v-if="modal.shown">
-    <div class="gantt-modal">
+    <div class="gantt-modal" :style="modal.style">
       <h3 class="title" v-if="modal.title" v-text="modal.title"></h3>
       <slot></slot>
     </div>

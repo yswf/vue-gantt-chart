@@ -11,7 +11,7 @@ export const TASK_INTERACTIONS = {
 };
 
 export const DEFAULT_TIME_UNIT_WIDTH = 40;
-export const RESOURCE_HEIGHT_PX = 40;
+export const DEFAULT_TASK_HEIGHT = 50;
 export const DEFAULT_DATE_FORMAT = "YYYY-MM-DD HH:mm";
 
 export const TIME_PERIODS = {

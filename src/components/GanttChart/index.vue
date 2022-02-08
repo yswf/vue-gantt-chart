@@ -6,8 +6,10 @@
         <input type="text" v-model="taskSpawnModalData.taskStart" />
         <input type="text" v-model="taskSpawnModalData.taskEnd" />
         <div class="actions">
-          <button @click="spawnTaskModalActionCancel">Cancel</button>
-          <button @click="spawnTaskModalActionSave">Save</button>
+          <button class="cancel" @click="spawnTaskModalActionCancel">
+            Cancel
+          </button>
+          <button class="save" @click="spawnTaskModalActionSave">Save</button>
         </div>
       </div>
     </Modal>
@@ -22,7 +24,6 @@
         <label for="verbose">Verbose</label>
       </span>
       <span>
-        <!-- select time period -->
         <select v-model="selectedTimePeriod">
           <option value="hours">Hours</option>
           <option value="days">Days</option>
@@ -69,7 +70,6 @@
           <div class="gantt-timeunits-secondary">
             <div
               class="gantt-timeunit-secondary"
-              :style="{ width: `${unit.width}px` }"
               v-for="(unit, index) in timelineData.secondary"
               :key="`time-unit-${unit.name}-${index}`"
               v-text="unit.name"
@@ -140,6 +140,9 @@ export default {
       taskSpawnData: null,
       taskSpawnModalData: {
         shown: false,
+        style: {
+          width: "210px",
+        },
         title: "Edit task data",
 
         taskName: "",
@@ -162,6 +165,7 @@ export default {
     cssVars() {
       return {
         "--gantt-time-unit-width": `${this.timeline.TIME_UNIT_WIDTH}px`,
+        "--gantt-task-height": `${this.timeline.TASK_HEIGHT}px`,
       };
     },
 
@@ -251,11 +255,13 @@ export default {
     //? it is called on @scroll event of timeline,
     //? and it cancels task spawning.
     taskSpawnStart(event) {
-      const date = this.timeline.getDateFromPosition(event.clientX);
+      const startDate = this.timeline.getDateFromPosition(event.clientX);
 
       this.taskSpawnData = {
+        startX: event.clientX,
+        startY: event.clientY,
         firstCall: true,
-        date,
+        startDate,
       };
 
       document.addEventListener("mousemove", this.taskSpawn);
@@ -265,14 +271,27 @@ export default {
     taskSpawn(event) {
       if (!this.taskSpawnData?.firstCall) return;
 
-      const date = this.taskSpawnData.date;
-      const start = date.format(DEFAULT_DATE_FORMAT).toString();
-      const end = date.add(1, "minute").format(DEFAULT_DATE_FORMAT).toString();
+      const startDate = this.taskSpawnData.startDate;
+      const start = startDate.format(DEFAULT_DATE_FORMAT).toString();
+      const end = startDate
+        .add(1, "minute")
+        .format(DEFAULT_DATE_FORMAT)
+        .toString();
+
+      const top = this.timeline.getBoundingClientRect().top;
+
+      // FIXME 60px is hardcoded, it should be calculated from timeline dates height
+      let y = Math.floor(
+        (this.taskSpawnData.startY - top - 60) / this.timeline.TASK_HEIGHT
+      );
+      if (y < 0) y = 0;
+      else if (y >= this.resources.length - 1) y = this.resources.length - 1;
 
       const task = this.chart.createTask({
         name: "New task",
         start,
         end,
+        y,
       });
 
       this.taskSpawnData.task = task;
@@ -342,17 +361,17 @@ $timeline-dates-height: $timeunit-height * 2;
   display: flex;
   flex-direction: column;
 
+  input {
+    width: 200px;
+    margin-bottom: 10px;
+  }
+
   .actions {
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
     margin-top: 10px;
-    gap: 30px;
-  }
-
-  input {
-    width: 200px;
-    margin-bottom: 10px;
+    gap: 15px;
   }
 }
 
@@ -361,11 +380,14 @@ $timeline-dates-height: $timeunit-height * 2;
   flex-direction: column;
   height: 100%;
   width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .gantt-chart-controls {
   display: flex;
   justify-self: flex-start;
+  align-items: center;
   gap: 30px;
   margin-bottom: 20px;
 }
@@ -392,7 +414,7 @@ $timeline-dates-height: $timeunit-height * 2;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 40px;
+    height: var(--gantt-task-height);
 
     box-sizing: border-box;
 
@@ -422,6 +444,7 @@ $timeline-dates-height: $timeunit-height * 2;
 
   .time {
     height: $timeline-dates-height;
+    border-bottom: 1px solid #ccc;
   }
 
   .gantt-timeunits-primary {
@@ -435,6 +458,8 @@ $timeline-dates-height: $timeunit-height * 2;
       text-align: center;
       height: 30px;
       box-sizing: border-box;
+      border-bottom: 1px solid #eee;
+      user-select: none;
     }
   }
 
@@ -445,15 +470,15 @@ $timeline-dates-height: $timeunit-height * 2;
     height: $timeunit-height;
 
     .gantt-timeunit-secondary {
-      padding: 5px;
       width: var(--gantt-time-unit-width);
       text-align: center;
       font-size: 0.8rem;
       color: #999;
       box-sizing: border-box;
+      height: $timeunit-height;
+      line-height: $timeunit-height;
+      user-select: none;
 
-      border-top: 1px solid #eee;
-      border-bottom: 1px solid #eee;
       &:not(:last-child) {
         border-right: 1px solid #eee;
       }
@@ -503,5 +528,57 @@ $timeline-dates-height: $timeunit-height * 2;
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: #000;
+  }
+}
+
+button {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:hover {
+    background: #eee;
+  }
+
+  &:active {
+    background: #ddd;
+  }
+
+  &.cancel {
+    color: #aaa;
+  }
+
+  &.save {
+    color: #000;
+  }
+}
+
+select {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: #000;
+  }
 }
 </style>

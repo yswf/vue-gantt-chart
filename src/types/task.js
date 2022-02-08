@@ -1,12 +1,6 @@
 /// <reference path="./task.d.ts" />
 
-import {
-  SIDES,
-  TASK_INTERACTIONS,
-  DEFAULT_TIME_UNIT_WIDTH,
-  RESOURCE_HEIGHT_PX,
-  DEFAULT_DATE_FORMAT,
-} from "@/constants";
+import { SIDES, TASK_INTERACTIONS, DEFAULT_DATE_FORMAT } from "@/constants";
 import moment from "moment";
 import { roundToNearest, uuidv4 } from "../utils";
 
@@ -24,8 +18,7 @@ export class Task {
     this.end = moment(clone.end, DEFAULT_DATE_FORMAT).unix() || moment.now();
     this.resource = clone.resource;
 
-    this.x = this.start * DEFAULT_TIME_UNIT_WIDTH;
-    this.y = (Number(clone.y) || 0) * RESOURCE_HEIGHT_PX;
+    this.y = Number(clone.y) || 0;
 
     this.style = clone.style || {};
 
@@ -40,24 +33,28 @@ export class Task {
     this.eventsMeta = {};
   }
 
+  get timeline() {
+    return this.chart.timeline;
+  }
+
   /* -------------------------------------------------------------------------- */
   /*                              position methods                              */
   /* -------------------------------------------------------------------------- */
 
   getWidth() {
     const width = this.getDuration() * this.getPixelsPerSecond();
-    const scrollWidth = this.chart.timeline.scrollWidth;
+    const scrollWidth = this.timeline.scrollWidth;
     return width + this.getLeft() > scrollWidth
       ? scrollWidth - this.getLeft()
       : width;
   }
 
   getLeft() {
-    return this.chart.timeline.getPositionFromDate(moment.unix(this.start));
+    return this.timeline.getPositionFromDate(moment.unix(this.start));
   }
 
   get top() {
-    return this.y * RESOURCE_HEIGHT_PX;
+    return this.y * this.timeline.TASK_HEIGHT;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -71,7 +68,7 @@ export class Task {
   isVisible() {
     return (
       this.getLeft() + this.getWidth() >= 0 &&
-      this.getLeft() <= this.chart.timeline.scrollWidth
+      this.getLeft() <= this.timeline.scrollWidth
     );
   }
 
@@ -134,8 +131,10 @@ export class Task {
   }
 
   getPixelsPerSecond() {
-    return this.chart.timeline.getPixelsPerSecond();
+    return this.timeline.getPixelsPerSecond();
   }
+
+  //FIXME snapToGrid mode does not work with timestamps properly
 
   /* -------------------------------- resize -------------------------------- */
 
@@ -196,7 +195,6 @@ export class Task {
   resizeEnd() {
     if (!this.interactionIs(TASK_INTERACTIONS.resize)) return;
 
-    //! TODO: fix rounding for unix timestamps
     // const { snapToGrid } = this.eventsMeta["resizeStart"];
     // if (!snapToGrid) {
     //   this.setStart(Math.round(this.start));
@@ -252,9 +250,9 @@ export class Task {
     let deltaResources = 0;
 
     if (snapToGrid) {
-      const unitWidth = this.chart.timeline.TIME_UNIT_WIDTH;
+      const unitWidth = this.timeline.TIME_UNIT_WIDTH;
       const xMovement = Math.abs(deltaX) >= unitWidth;
-      const yMovement = Math.abs(deltaY) >= RESOURCE_HEIGHT_PX;
+      const yMovement = Math.abs(deltaY) >= this.timeline.TASK_HEIGHT;
 
       if (xMovement) {
         deltaTime =
@@ -262,11 +260,11 @@ export class Task {
       }
 
       if (yMovement) {
-        deltaResources = Math.round(deltaY / RESOURCE_HEIGHT_PX);
+        deltaResources = Math.round(deltaY / this.timeline.TASK_HEIGHT);
       }
     } else {
       deltaTime = deltaX / this.getPixelsPerSecond();
-      deltaResources = deltaY / RESOURCE_HEIGHT_PX;
+      deltaResources = deltaY / this.timeline.TASK_HEIGHT;
     }
 
     this.start = startOld + deltaTime;

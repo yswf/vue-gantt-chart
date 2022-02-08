@@ -1,7 +1,7 @@
 import {
   DEFAULT_DATE_FORMAT,
   DEFAULT_TIME_UNIT_WIDTH,
-  RESOURCE_HEIGHT_PX,
+  DEFAULT_TASK_HEIGHT,
   TIME_PERIODS,
 } from "../constants";
 import { uuidv4 } from "@/utils";
@@ -25,6 +25,7 @@ export class GanttChartTimeline {
     };
 
     this.TIME_UNIT_WIDTH = DEFAULT_TIME_UNIT_WIDTH;
+    this.TASK_HEIGHT = DEFAULT_TASK_HEIGHT;
 
     this.year = 2022;
     this.month = 1;
@@ -83,6 +84,11 @@ export class GanttChartTimeline {
 
   updateDividers() {
     Object.assign(this.timePeriodData, this.getDividers());
+  }
+
+  getBoundingClientRect() {
+    if (!this.container) return {};
+    return this.container.getBoundingClientRect();
   }
 
   /* -------------------------------------------------------------------------- */
@@ -273,7 +279,7 @@ export class GanttChartTimeline {
     const dividersH = [];
 
     for (let i = 1; i <= hAmount; i++) {
-      const top = i * RESOURCE_HEIGHT_PX;
+      const top = i * this.TASK_HEIGHT;
       dividersH.push({
         top,
         emphasize: true,
