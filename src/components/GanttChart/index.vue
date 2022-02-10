@@ -40,6 +40,7 @@
           v-for="resource in resources"
           :key="resource.id"
           class="gantt-resource"
+          :class="resource.classes"
           :id="resource.id"
           :style="{
             height: `${resource.getHeightPx()}px`,
@@ -443,6 +444,10 @@ $divider-color-emphasis: #eee;
 
     &:not(:last-child) {
       border-bottom: 1px solid #ccc;
+    }
+
+    &.task-target {
+      background-color: #d6d5d5;
     }
   }
 }

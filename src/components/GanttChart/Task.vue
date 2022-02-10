@@ -5,8 +5,8 @@
       interacting: task.isInteracted(),
     }"
     :style="{
-      width: `${task.getWidth()}px`,
-      transform: `translate(${task.getLeft()}px, ${task.getTop()}px)`,
+      width: `${task.getWidthPx()}px`,
+      transform: `translate(${task.getLeftPx()}px, ${task.getTopPx()}px)`,
       ...task.style,
     }"
     @mousedown.prevent.stop="task.moveStart($event)"
@@ -88,6 +88,7 @@ export default {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    user-select: none;
 
     .task-name {
       font-size: 0.9rem;

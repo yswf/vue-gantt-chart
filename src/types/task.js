@@ -56,19 +56,18 @@ export class Task {
   /*                              position methods                              */
   /* -------------------------------------------------------------------------- */
 
-  getWidth() {
+  getWidthPx() {
     const width = this.getDuration() * this.getPixelsPerSecond();
     const scrollWidth = this.timeline.scrollWidth;
-    return width + this.getLeft() > scrollWidth
-      ? scrollWidth - this.getLeft()
-      : width;
+    const left = this.getLeftPx();
+    return width + left > scrollWidth ? scrollWidth - left : width;
   }
 
-  getLeft() {
+  getLeftPx() {
     return this.timeline.getPositionFromDate(moment.unix(this.start));
   }
 
-  getTop() {
+  getTopPx() {
     return this.isInteracted()
       ? this.y * this.timeline.TASK_HEIGHT
       : (this.resource.getTop() + this.verticalOrder) *
@@ -84,10 +83,8 @@ export class Task {
   }
 
   isVisible() {
-    return (
-      this.getLeft() + this.getWidth() >= 0 &&
-      this.getLeft() <= this.timeline.scrollWidth
-    );
+    const left = this.getLeftPx();
+    return left + this.getWidthPx() >= 0 && left <= this.timeline.scrollWidth;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -233,6 +230,8 @@ export class Task {
 
     const snapToGrid = this.chart.getSetting("snapToGrid", false);
 
+    this.y = this.resource.getTop();
+
     this.eventsMeta["moveStart"] = {
       snapToGrid,
       startX: event.clientX,
@@ -287,6 +286,8 @@ export class Task {
     this.start = startOld + deltaTime;
     this.end = endOld + deltaTime;
     this.y = yOld + deltaResources;
+
+    if (!snapToGrid) this.highlightTargetResource(this.y);
   }
 
   moveEnd() {
@@ -298,12 +299,31 @@ export class Task {
 
     if (oldResource.id != this.resource.id) oldResource.resolveCollisions();
     this.resource.resolveCollisions();
-    this.y = this.resource.getTop();
     this.timeline.updateDividers();
+
+    this.targetResourceUnset();
 
     window.removeEventListener("mousemove", this.methodsRefs["move"]);
     delete this.eventsMeta["moveStart"];
     this.setInteraction(TASK_INTERACTIONS.none);
+  }
+
+  //! Resource highlighting is quite performance costly
+  //? Why? GanttChart.getResourceByY method is relatively slow.
+  //? Possible solution is to cache the result of this method.
+  highlightTargetResource(y) {
+    const targetResource = this.chart.getResourceByY(Math.round(y));
+    if (targetResource) {
+      this.targetResourceUnset();
+      targetResource.addClass("task-target");
+      this.targetResource = targetResource;
+    }
+  }
+
+  targetResourceUnset() {
+    if (!this.targetResource) return;
+    this.targetResource.removeClass("task-target");
+    delete this.targetResource;
   }
 
   /* -------------------------------------------------------------------------- */

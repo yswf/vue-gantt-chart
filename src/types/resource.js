@@ -8,9 +8,22 @@ export class Resource {
 
     this.id = `resource-${uuidv4()}`;
     this.name = clone.name;
-    this.style = clone.style || {};
 
     this.height = 1;
+
+    this.classes_ = new Set(clone.classes || []);
+  }
+
+  get classes() {
+    return Array.from(this.classes_);
+  }
+
+  addClass(className) {
+    this.classes_.add(className);
+  }
+
+  removeClass(className) {
+    this.classes_.delete(className);
   }
 
   getHeight() {
@@ -26,11 +39,11 @@ export class Resource {
   }
 
   getTop() {
-    const selfOrder = this.getIndex();
+    const selfIndex = this.getIndex();
     let top = 0;
 
     for (const resource of this.chart.resources) {
-      if (resource.getIndex() >= selfOrder) break;
+      if (resource.getIndex() >= selfIndex) break;
       top += resource.getHeight();
     }
 
