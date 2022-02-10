@@ -37,13 +37,20 @@
     <div class="gantt-chart" @mousewheel="scale" :style="cssVars">
       <div class="gantt-resources">
         <div
-          class="gantt-resource"
           v-for="resource in resources"
           :key="resource.id"
+          class="gantt-resource"
+          :id="resource.id"
+          :style="{
+            height: `${resource.getHeightPx()}px`,
+          }"
           v-text="resource.name"
         ></div>
         <div class="gantt-resource">
-          <button style="width: 100%; height: 100%" @click="newResource">
+          <button
+            style="width: 100%; height: 50px; border-radius: 0; border: none"
+            @click="newResource"
+          >
             +
           </button>
         </div>
@@ -206,6 +213,12 @@ export default {
   },
 
   mounted() {
+    const resources = new Array(10).fill(0).map((_, index) => ({
+      name: `Resource ${index + 1}`,
+    }));
+
+    resources.forEach((resource) => this.chart.createResource(resource));
+
     const tasks = [
       {
         name: "Task 1",
@@ -214,11 +227,6 @@ export default {
       },
     ];
 
-    const resources = new Array(10).fill(0).map((_, index) => ({
-      name: `Resource ${index + 1}`,
-    }));
-
-    resources.forEach((resource) => this.chart.createResource(resource));
     tasks.forEach((task) => this.chart.createTask(task));
   },
 
@@ -271,7 +279,12 @@ export default {
     taskSpawn(event) {
       if (!this.taskSpawnData?.firstCall) return;
 
-      const startDate = this.taskSpawnData.startDate;
+      const startX = this.taskSpawnData.startX;
+      const diff = event.clientX - startX;
+      const threshold = 20;
+      if (Math.abs(diff) < threshold) return;
+
+      const startDate = this.timeline.getDateFromPosition(startX + diff);
       const start = startDate.format(DEFAULT_DATE_FORMAT).toString();
       const end = startDate
         .add(1, "minute")
@@ -357,6 +370,11 @@ export default {
 $timeunit-height: 30px;
 $timeline-dates-height: $timeunit-height * 2;
 
+$divider-height: 1px;
+$divider-width: 1px;
+$divider-color: #f7f7f7;
+$divider-color-emphasis: #eee;
+
 .modal-task-spawn {
   display: flex;
   flex-direction: column;
@@ -378,7 +396,7 @@ $timeline-dates-height: $timeunit-height * 2;
 .gantt-chart-wrapper {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: fit-content;
   width: 100%;
   padding: 20px;
   box-sizing: border-box;
@@ -405,7 +423,7 @@ $timeline-dates-height: $timeunit-height * 2;
 }
 
 .gantt-resources {
-  padding-top: $timeline-dates-height;
+  padding-top: calc(#{$divider-height} + #{$timeline-dates-height});
   width: 220px;
   border: 1px solid #ccc;
   margin-bottom: 18px;
@@ -414,7 +432,8 @@ $timeline-dates-height: $timeunit-height * 2;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: var(--gantt-task-height);
+    min-height: var(--gantt-task-height);
+    transition: all 0.2s ease-in-out;
 
     box-sizing: border-box;
 
@@ -494,16 +513,16 @@ $timeline-dates-height: $timeunit-height * 2;
   .divider-v,
   .divider-h {
     position: absolute;
-    background-color: #f7f7f7;
+    background-color: $divider-color;
     z-index: -1;
 
     &.emphasize {
-      background-color: #eee;
+      background-color: $divider-color-emphasis;
     }
   }
 
   .divider-v {
-    width: 1px;
+    width: $divider-width;
     height: 100%;
     top: $timeline-dates-height;
 
@@ -519,7 +538,7 @@ $timeline-dates-height: $timeunit-height * 2;
   .divider-h {
     left: 0;
     top: $timeline-dates-height;
-    height: 1px;
+    height: $divider-height;
     width: 100%;
   }
 }

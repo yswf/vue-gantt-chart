@@ -36,23 +36,23 @@ export class GanttChartTimeline {
     this.update();
   }
 
-  get container() {
+  get el() {
     return document.getElementById(this.id) || {};
   }
 
   get scrollLeft() {
-    return this.container.scrollLeft;
+    return this.el.scrollLeft;
   }
 
   set scrollLeft(scrollLeft) {
-    this.container.scrollLeft = scrollLeft;
+    this.el.scrollLeft = scrollLeft;
   }
 
   get scrollWidth() {
     return this.timePeriodData.totalWidth;
   }
 
-  get containerScrollbarThumbWidth() {
+  get scrollbarThumbWidth() {
     const scrollbarArrowWidth = 20;
     const viewableRatio = window.innerWidth / this.scrollWidth;
     const scrollBarArea = window.innerWidth - scrollbarArrowWidth * 2;
@@ -60,8 +60,8 @@ export class GanttChartTimeline {
     return scrollBarArea * viewableRatio;
   }
 
-  containerScrollToAction() {
-    if (!this.container) return;
+  scrollToAction() {
+    if (!this.el) return;
 
     //? why is timeouts needed?
     //? when we set scrollLeft property of an element,
@@ -73,13 +73,13 @@ export class GanttChartTimeline {
     setTimeout(() => {
       this.scrollLeft =
         this.getPositionFromDate(this.getCurrentMoment()) -
-        this.containerScrollbarThumbWidth;
+        this.scrollbarThumbWidth;
     }, 25);
   }
 
   update() {
     this.getTimePeriod();
-    this.containerScrollToAction();
+    this.scrollToAction();
   }
 
   updateDividers() {
@@ -87,8 +87,7 @@ export class GanttChartTimeline {
   }
 
   getBoundingClientRect() {
-    if (!this.container) return {};
-    return this.container.getBoundingClientRect();
+    return this.el.getBoundingClientRect();
   }
 
   /* -------------------------------------------------------------------------- */
@@ -278,8 +277,12 @@ export class GanttChartTimeline {
     const hAmount = this.chart.resources.length;
     const dividersH = [];
 
+    let prevTop = 0;
     for (let i = 1; i <= hAmount; i++) {
-      const top = i * this.TASK_HEIGHT;
+      const resource = this.chart.getResourceByIndex(i - 1);
+      const top = prevTop + resource.getHeightPx();
+      prevTop = top;
+
       dividersH.push({
         top,
         emphasize: true,
@@ -302,7 +305,7 @@ export class GanttChartTimeline {
   }
 
   getDateFromPosition(x) {
-    const rectLeft = this.container.getBoundingClientRect().left;
+    const rectLeft = this.el.getBoundingClientRect().left;
     const delta = x - rectLeft + this.scrollLeft;
 
     return this.getStartDate().add(

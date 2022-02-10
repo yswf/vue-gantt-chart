@@ -42,6 +42,12 @@
       "parser": "babel-eslint"
     },
     "rules": {
+      "prettier/prettier": [
+        "error",
+        {
+          "endOfLine": "auto"
+        }
+      ],
       "vue/order-in-components": [
         "error",
         {

@@ -72,6 +72,41 @@ export class GanttChart {
     this.resources = arrayRemove(this.resources, resource);
   }
 
+  getResourceByIndex(index, unsafe = false) {
+    if (unsafe) return this.resources[index];
+    const safeIndex = Math.max(0, Math.min(index, this.resources.length - 1));
+    return this.resources[safeIndex];
+  }
+
+  getResourceById(id) {
+    return this.resources.find((resource) => resource.id === id);
+  }
+
+  getResourceByY(y) {
+    if (y < 0) return this.resources[0];
+
+    let totalHeight = 0;
+    const resourcePosition = this.resources.map((r) => {
+      const height = r.getHeight();
+
+      const range = {
+        id: r.id,
+        top: totalHeight,
+        bottom: height + totalHeight,
+      };
+      totalHeight += height;
+      return range;
+    });
+
+    if (y >= totalHeight) return this.resources[this.resources.length - 1];
+
+    const resource = resourcePosition.find((r) => {
+      return y >= r.top && y < r.bottom;
+    });
+
+    return this.getResourceById(resource.id);
+  }
+
   /* -------------------------------------------------------------------------- */
   /*                              settings methods                              */
   /* -------------------------------------------------------------------------- */

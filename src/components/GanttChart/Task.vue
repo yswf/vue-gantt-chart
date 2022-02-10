@@ -6,7 +6,7 @@
     }"
     :style="{
       width: `${task.getWidth()}px`,
-      transform: `translate(${task.getLeft()}px, ${task.top}px)`,
+      transform: `translate(${task.getLeft()}px, ${task.getTop()}px)`,
       ...task.style,
     }"
     @mousedown.prevent.stop="task.moveStart($event)"
@@ -68,10 +68,12 @@ export default {
   box-sizing: border-box;
   background-color: #69abe3;
   padding: 5px;
+  transition: all 0.2s ease-in-out;
 
   &.interacting {
     opacity: 0.7;
     pointer-events: none;
+    transition: none;
   }
 
   .task-content {
@@ -104,7 +106,9 @@ export default {
     z-index: 1;
     cursor: col-resize;
     position: absolute;
-    width: 10px;
+    width: 10%;
+    max-width: 30px;
+    min-width: 10px;
     top: 0;
     bottom: 0;
     height: 100%;

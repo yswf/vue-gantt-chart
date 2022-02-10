@@ -1,5 +1,6 @@
 /// <reference path="./task.d.ts" />
 
+import { Resource } from "./resource";
 import { SIDES, TASK_INTERACTIONS, DEFAULT_DATE_FORMAT } from "@/constants";
 import moment from "moment";
 import { roundToNearest, uuidv4 } from "../utils";
@@ -16,11 +17,15 @@ export class Task {
     this.start =
       moment(clone.start, DEFAULT_DATE_FORMAT).unix() || moment.now();
     this.end = moment(clone.end, DEFAULT_DATE_FORMAT).unix() || moment.now();
-    this.resource = clone.resource;
 
-    this.y = Number(clone.y) || 0;
-
-    this.style = clone.style || {};
+    this.verticalOrder = Number(clone.verticalOrder) || 0;
+    if (clone.resource instanceof Resource) {
+      this.resource = clone.resource;
+      this.y_ = this.resource.getTop() + this.verticalOrder;
+    } else {
+      this.y_ = Number(clone.y) || 0;
+      this.resource = this.chart.getResourceByY(this.y);
+    }
 
     //? interaction property is used to determine
     //? if there is any interaction with the task
@@ -31,10 +36,20 @@ export class Task {
     this.interaction = TASK_INTERACTIONS.none;
     this.methodsRefs = {};
     this.eventsMeta = {};
+
+    this.style = clone.style || {};
   }
 
   get timeline() {
     return this.chart.timeline;
+  }
+
+  get y() {
+    return this.y_ + this.verticalOrder;
+  }
+
+  set y(value) {
+    this.y_ = value;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -53,8 +68,11 @@ export class Task {
     return this.timeline.getPositionFromDate(moment.unix(this.start));
   }
 
-  get top() {
-    return this.y * this.timeline.TASK_HEIGHT;
+  getTop() {
+    return this.isInteracted()
+      ? this.y * this.timeline.TASK_HEIGHT
+      : (this.resource.getTop() + this.verticalOrder) *
+          this.timeline.TASK_HEIGHT;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -170,12 +188,9 @@ export class Task {
     )
       return;
 
-    const { startX, startOld, endOld, side, snapToGrid } =
-      this.eventsMeta["resizeStart"];
+    const { startX, startOld, endOld, side } = this.eventsMeta["resizeStart"];
 
     let delta = (event.clientX - startX) / this.getPixelsPerSecond();
-    // if (snapToGrid && Math.abs(delta) < 1) return;
-    // else if (snapToGrid) delta = parseInt(delta);
 
     if (side === SIDES.left) {
       if (startOld + delta >= endOld) {
@@ -204,6 +219,8 @@ export class Task {
     const { resizeEndCallback } = this.eventsMeta["resizeStart"];
     if (typeof resizeEndCallback === "function") resizeEndCallback();
 
+    this.resource.resolveCollisions();
+
     window.removeEventListener("mousemove", this.methodsRefs["resize"]);
     delete this.eventsMeta["resizeStart"];
     this.setInteraction(TASK_INTERACTIONS.none);
@@ -222,7 +239,7 @@ export class Task {
       startY: event.clientY,
       startOld: this.start,
       endOld: this.end,
-      yOld: this.y,
+      yOld: this.y_,
     };
 
     this.methodsRefs["move"] = this.move.bind(this);
@@ -275,8 +292,14 @@ export class Task {
   moveEnd() {
     if (!this.interactionIs(TASK_INTERACTIONS.move)) return;
 
-    const { snapToGrid } = this.eventsMeta["moveStart"];
-    if (!snapToGrid) this.y = Math.round(this.y);
+    const resource = this.chart.getResourceByY(Math.round(this.y));
+    const oldResource = this.resource;
+    this.resource = resource;
+
+    if (oldResource.id != this.resource.id) oldResource.resolveCollisions();
+    this.resource.resolveCollisions();
+    this.y = this.resource.getTop();
+    this.timeline.updateDividers();
 
     window.removeEventListener("mousemove", this.methodsRefs["move"]);
     delete this.eventsMeta["moveStart"];
@@ -286,6 +309,14 @@ export class Task {
   /* -------------------------------------------------------------------------- */
   /*                                misc methods                                */
   /* -------------------------------------------------------------------------- */
+
+  collidesWith(task) {
+    return !(
+      this.resource.id != task.resource.id ||
+      this.start >= task.end ||
+      this.end <= task.start
+    );
+  }
 
   remove() {
     this.chart.removeTask(this);
@@ -301,6 +332,7 @@ export class Task {
       name: this.name,
       start: this.start,
       end: this.end,
+      resource: this.resource?.id,
     };
   }
 
