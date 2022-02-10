@@ -300,7 +300,7 @@ export class Task {
     if (oldResource.id != this.resource.id) oldResource.resolveCollisions();
     this.resource.resolveCollisions();
     this.timeline.updateDividers();
-
+    this.y = this.resource.getTop();
     this.targetResourceUnset();
 
     window.removeEventListener("mousemove", this.methodsRefs["move"]);
