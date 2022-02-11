@@ -1,10 +1,10 @@
 <template>
-  <div class="gantt-chart-wrapper">
-    <Modal :modal="taskSpawnModalData">
+  <div class="gantt-chart" @mousewheel="scale" :style="cssVars">
+    <Modal :modal="taskSpawnModal">
       <div class="modal-task-spawn">
-        <input type="text" v-model="taskSpawnModalData.taskName" />
-        <input type="text" v-model="taskSpawnModalData.taskStart" />
-        <input type="text" v-model="taskSpawnModalData.taskEnd" />
+        <input type="text" v-model="taskSpawnModal.taskName" />
+        <input type="text" v-model="taskSpawnModal.taskStart" />
+        <input type="text" v-model="taskSpawnModal.taskEnd" />
         <div class="actions">
           <button class="cancel" @click="spawnTaskModalActionCancel">
             Cancel
@@ -13,113 +13,85 @@
         </div>
       </div>
     </Modal>
-    <div class="gantt-chart-controls">
-      <span>
-        <input type="checkbox" v-model="snapToGrid" id="snap-mode" />
-        <label for="snap-mode">Snap to grid</label>
-      </span>
-
-      <span>
-        <input type="checkbox" v-model="verbose" id="verbose" />
-        <label for="verbose">Verbose</label>
-      </span>
-      <span>
-        <select v-model="selectedTimePeriod">
-          <option value="hours">Hours</option>
-          <option value="days">Days</option>
-          <option value="weeks">Weeks</option>
-          <option value="months">Months</option>
-          <option value="quarters">Quarters</option>
-          <option value="years">Years</option>
-        </select>
-      </span>
-    </div>
-    <div class="gantt-chart" @mousewheel="scale" :style="cssVars">
-      <div class="gantt-resources">
-        <div
-          v-for="resource in resources"
-          :key="resource.id"
-          class="gantt-resource"
-          :class="resource.classes"
-          :id="resource.id"
-          :style="{
-            height: `${resource.getHeightPx()}px`,
-          }"
-          v-text="resource.name"
-        ></div>
-        <div class="gantt-resource">
-          <button
-            style="width: 100%; height: 50px; border-radius: 0; border: none"
-            @click="newResource"
-          >
-            +
-          </button>
-        </div>
-      </div>
+    <div class="gantt-resources">
       <div
-        class="gantt-timeline"
-        :id="timeline.id"
-        @scroll="taskSpawnCancel"
-        @mousedown="taskSpawnStart"
-      >
-        <div class="time">
-          <div class="gantt-timeunits-primary">
-            <div
-              class="gantt-timeunit-primary"
-              :style="{
-                width: `${unit.width}px`,
-                transform: `translateX(${unit.left}px)`,
-              }"
-              v-for="unit in timelineData.primary"
-              :key="unit.name"
-              v-text="unit.name"
-            ></div>
-          </div>
-          <div class="gantt-timeunits-secondary">
-            <div
-              class="gantt-timeunit-secondary"
-              v-for="(unit, index) in timelineData.secondary"
-              :key="`time-unit-${unit.name}-${index}`"
-              v-text="unit.name"
-            ></div>
-          </div>
-        </div>
-
-        <div class="gantt-timeline-dividers">
-          <div
-            class="divider-v"
-            :class="{ emphasize: divider.emphasize }"
-            v-for="divider in timelineData.dividersV"
-            :key="`dv-${divider.left}`"
-            :style="{
-              transform: `translateX(${divider.left}px)`,
-            }"
-          ></div>
-          <div
-            class="divider-h"
-            :class="{ emphasize: divider.emphasize }"
-            v-for="divider in timelineData.dividersH"
-            :key="`dh-${divider.top}`"
-            :style="{
-              width: `${timelineData.totalWidth}px`,
-              transform: `translateY(${divider.top}px)`,
-            }"
-          ></div>
-        </div>
-        <div class="tasks">
-          <Task
-            v-for="task in filteredTasks"
-            :key="`task-${task.id}`"
-            v-bind="{ task }"
-          />
-        </div>
+        v-for="resource in resources"
+        :key="resource.id"
+        class="gantt-resource"
+        :class="resource.classes"
+        :id="resource.id"
+        :style="{
+          height: `${resource.getHeightPx()}px`,
+        }"
+        v-text="resource.name"
+      ></div>
+      <div class="gantt-resource">
+        <button
+          style="width: 100%; height: 50px; border-radius: 0; border: none"
+          @click="chart.createResource({ name: 'New Resource' })"
+        >
+          +
+        </button>
       </div>
     </div>
-    <pre
-      v-if="verbose"
-      class="gantt-chart-data"
-      v-text="JSON.stringify(chartJSON, null, 2)"
-    ></pre>
+    <div
+      class="gantt-timeline"
+      :id="timeline.id"
+      @scroll="taskSpawnCancel"
+      @mousedown="taskSpawnStart"
+    >
+      <div class="time">
+        <div class="gantt-timeunits-primary">
+          <div
+            class="gantt-timeunit-primary"
+            :style="{
+              width: `${unit.width}px`,
+              transform: `translateX(${unit.left}px)`,
+            }"
+            v-for="unit in timelineData.primary"
+            :key="unit.name"
+            v-text="unit.name"
+          ></div>
+        </div>
+        <div class="gantt-timeunits-secondary">
+          <div
+            class="gantt-timeunit-secondary"
+            v-for="(unit, index) in timelineData.secondary"
+            :key="`time-unit-${unit.name}-${index}`"
+            v-text="unit.name"
+          ></div>
+        </div>
+      </div>
+
+      <div class="gantt-timeline-dividers">
+        <div
+          class="divider-v"
+          :class="{ emphasize: divider.emphasize }"
+          v-for="divider in timelineData.dividersV"
+          :key="`dv-${divider.left}`"
+          :style="{
+            transform: `translateX(${divider.left}px)`,
+          }"
+        ></div>
+        <div
+          class="divider-h"
+          :class="{ emphasize: divider.emphasize }"
+          v-for="divider in timelineData.dividersH"
+          :key="`dh-${divider.top}`"
+          :style="{
+            width: `${timelineData.totalWidth}px`,
+            transform: `translateY(${divider.top}px)`,
+          }"
+        ></div>
+      </div>
+      <div class="tasks">
+        <Task
+          v-for="task in filteredTasks"
+          :key="`task-${task.id}`"
+          v-bind="{ task }"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -129,8 +101,7 @@ import Modal from "./Modal.vue";
 
 import { SIDES } from "@/constants";
 import { DEFAULT_DATE_FORMAT } from "../../constants";
-
-import { mapState, mapActions, mapGetters } from "vuex";
+import { GanttChart } from "../../types/gantt-chart";
 import moment from "moment";
 
 export default {
@@ -141,12 +112,19 @@ export default {
     Task,
   },
 
+  props: {
+    chart: {
+      type: GanttChart,
+      required: true,
+    },
+  },
+
   data() {
     return {
       SIDES,
 
       taskSpawnData: null,
-      taskSpawnModalData: {
+      taskSpawnModal: {
         shown: false,
         style: {
           width: "210px",
@@ -161,14 +139,19 @@ export default {
   },
 
   computed: {
-    ...mapState("ganttChart", { chart: "chart" }),
-    ...mapGetters("ganttChart", {
-      tasks: "tasks",
-      resources: "resources",
-      timeline: "timeline",
-      settings: "settings",
-      chartJSON: "chartJSON",
-    }),
+    tasks() {
+      return this.chart.tasks;
+    },
+    resources() {
+      return this.chart.resources;
+    },
+    timeline() {
+      return this.chart.timeline;
+    },
+
+    chartJSON() {
+      return this.chart.toJSON();
+    },
 
     cssVars() {
       return {
@@ -184,62 +167,9 @@ export default {
     filteredTasks() {
       return this.tasks.filter((task) => task.isVisible());
     },
-
-    selectedTimePeriod: {
-      get() {
-        return this.timeline.timePeriod.name;
-      },
-      set(value) {
-        this.timeline.setTimePeriod(value);
-      },
-    },
-
-    verbose: {
-      get() {
-        return this.settings.verbose;
-      },
-      set(value) {
-        this.setSettings({ verbose: value });
-      },
-    },
-
-    snapToGrid: {
-      get() {
-        return this.settings.snapToGrid;
-      },
-      set(value) {
-        this.setSettings({ snapToGrid: value });
-      },
-    },
-  },
-
-  mounted() {
-    const resources = new Array(10).fill(0).map((_, index) => ({
-      name: `Resource ${index + 1}`,
-    }));
-
-    resources.forEach((resource) => this.chart.createResource(resource));
-
-    const tasks = [
-      {
-        name: "Task 1",
-        start: "2022-01-12 08:00",
-        end: "2022-01-14 10:00",
-      },
-    ];
-
-    tasks.forEach((task) => this.chart.createTask(task));
   },
 
   methods: {
-    ...mapActions("ganttChart", {
-      setSettings: "setSettings",
-    }),
-
-    newResource() {
-      this.chart.createResource({ name: "New resource" });
-    },
-
     scale(event) {
       if (!event.ctrlKey && !event.metaKey) return;
       event.preventDefault();
@@ -334,7 +264,7 @@ export default {
       const task = this.taskSpawnData?.task;
       if (!task) return;
 
-      Object.assign(this.taskSpawnModalData, {
+      Object.assign(this.taskSpawnModal, {
         shown: true,
         taskName: task.name,
         taskStart: task.getStartString(),
@@ -347,15 +277,15 @@ export default {
     /* -------------------------------------------------------------------------- */
 
     spawnTaskModalActionCancel() {
-      this.taskSpawnModalData.shown = false;
+      this.taskSpawnModal.shown = false;
 
       this.taskSpawnCancel();
     },
 
     spawnTaskModalActionSave() {
-      this.taskSpawnModalData.shown = false;
+      this.taskSpawnModal.shown = false;
 
-      const modalData = this.taskSpawnModalData;
+      const modalData = this.taskSpawnModal;
 
       this.taskSpawnData.task.name = modalData.taskName;
       this.taskSpawnData.task.start = moment(modalData.taskStart).unix();
@@ -392,30 +322,6 @@ $divider-color-emphasis: #eee;
     margin-top: 10px;
     gap: 15px;
   }
-}
-
-.gantt-chart-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: fit-content;
-  width: 100%;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.gantt-chart-controls {
-  display: flex;
-  justify-self: flex-start;
-  align-items: center;
-  gap: 30px;
-  margin-bottom: 20px;
-}
-
-.gantt-chart-data {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: auto;
 }
 
 .gantt-chart {

@@ -173,7 +173,7 @@ export class GanttChartTimeline {
     const startDate = this.getStartDate();
     const endDate = this.getEndDate();
 
-    let source = GanttChartTimeline.getTimeRange(
+    const pSource = GanttChartTimeline.getTimeRange(
       startDate,
       endDate,
       primaryUnit
@@ -183,7 +183,7 @@ export class GanttChartTimeline {
     const primaryUnitWidth =
       this.TIME_UNIT_WIDTH * secondaryUnitsPerPrimaryUnit;
     let widthsSum = 0;
-    for (const item of source) {
+    for (const item of pSource) {
       const name = item.format(primaryFormat);
       const width = primaryUnitWidth;
 
@@ -196,15 +196,20 @@ export class GanttChartTimeline {
       widthsSum += width;
     }
 
-    source = GanttChartTimeline.getTimeRange(
+    const sSource = GanttChartTimeline.getTimeRange(
       startDate,
       endDate,
       secondaryUnit,
       { step: secondaryStep }
     );
 
+    const expectedLength = pSource.length * secondaryUnitsPerPrimaryUnit;
+    if (sSource.length > expectedLength) {
+      sSource.splice(expectedLength, sSource.length - expectedLength);
+    }
+
     const secondary = [];
-    for (const item of source) {
+    for (const item of sSource) {
       const name = item.format(secondaryFormat);
 
       secondary.push({
