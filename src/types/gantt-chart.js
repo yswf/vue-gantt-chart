@@ -12,6 +12,7 @@ export class GanttChart {
     const defaultSettings = {
       verbose: false,
       snapToGrid: false,
+      tasksAnimations: true,
     };
 
     this.id = `gantt-chart-${uuidv4()}`;
@@ -105,6 +106,13 @@ export class GanttChart {
     });
 
     return this.getResourceById(resource.id);
+  }
+
+  getTotalResourcesHeight() {
+    return this.resources.reduce(
+      (acc, r) => acc + r.getHeightPx(),
+      this.timeline.TASK_HEIGHT
+    );
   }
 
   /* -------------------------------------------------------------------------- */

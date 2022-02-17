@@ -1,9 +1,7 @@
 <template>
   <div
     class="task"
-    :class="{
-      interacting: task.isInteracted(),
-    }"
+    :class="{ interacted, animate }"
     :style="{
       width: `${task.getWidthPx()}px`,
       transform: `translate(${task.getLeftPx()}px, ${task.getTopPx()}px)`,
@@ -50,6 +48,20 @@ export default {
       SIDES,
     };
   },
+
+  computed: {
+    chart() {
+      return this.task.chart;
+    },
+
+    animate() {
+      return this.chart.getSetting("tasksAnimations", true);
+    },
+
+    interacted() {
+      return this.task.isInteracted();
+    },
+  },
 };
 </script>
 
@@ -70,9 +82,13 @@ export default {
   padding: 5px;
   transition: all 0.2s ease-in-out;
 
-  &.interacting {
+  &.interacted {
     opacity: 0.7;
     pointer-events: none;
+    transition: none;
+  }
+
+  &:not(.animate) {
     transition: none;
   }
 

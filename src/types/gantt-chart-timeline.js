@@ -33,61 +33,37 @@ export class GanttChartTimeline {
     this.hour = 10;
     this.minute = 0;
 
+    this.scrollLeft = 0;
+
     this.update();
   }
 
-  get el() {
-    return document.getElementById(this.id) || {};
+  getScrollWidth() {
+    return this.timePeriodData?.totalWidth || 0;
   }
 
-  get scrollLeft() {
-    return this.el.scrollLeft;
+  getScrollLeft() {
+    return this.scrollLeft;
   }
 
-  set scrollLeft(scrollLeft) {
-    this.el.scrollLeft = scrollLeft;
+  scrollToMoment(momentInstance) {
+    if (!(momentInstance instanceof moment))
+      momentInstance = moment(momentInstance);
+    const pos = this.getPositionFromDate(momentInstance);
+    this.scrollTo(pos);
   }
 
-  get scrollWidth() {
-    return this.timePeriodData.totalWidth;
-  }
-
-  get scrollbarThumbWidth() {
-    const scrollbarArrowWidth = 20;
-    const viewableRatio = window.innerWidth / this.scrollWidth;
-    const scrollBarArea = window.innerWidth - scrollbarArrowWidth * 2;
-
-    return scrollBarArea * viewableRatio;
-  }
-
-  scrollToAction() {
-    if (!this.el) return;
-
-    //? why is timeouts needed?
-    //? when we set scrollLeft property of an element,
-    //? it seems to be setting the width somehow relative
-    //? to the total width (scrollWidth property) of a scrollable element.
-    //? As scrollWidth property is read-only, we need to wait
-    //? for DOM to update and re-calculate the scrollWidth,
-    //? then we can properly set the scrollLeft.
-    setTimeout(() => {
-      this.scrollLeft =
-        this.getPositionFromDate(this.getCurrentMoment()) -
-        this.scrollbarThumbWidth;
-    }, 25);
+  scrollTo(pos) {
+    this.scrollLeft = pos;
   }
 
   update() {
     this.getTimePeriod();
-    this.scrollToAction();
+    this.scrollToMoment(this.getCurrentMoment());
   }
 
   updateDividers() {
     Object.assign(this.timePeriodData, this.getDividers());
-  }
-
-  getBoundingClientRect() {
-    return this.el.getBoundingClientRect();
   }
 
   /* -------------------------------------------------------------------------- */
@@ -262,7 +238,7 @@ export class GanttChartTimeline {
     const vSecondaryAmount = Math.floor(totalWidth / this.TIME_UNIT_WIDTH);
     const dividersV = {};
 
-    for (let i = 0; i < vPrimaryAmount; i++) {
+    for (let i = 1; i < vPrimaryAmount; i++) {
       const left = i * primaryUnitWidth;
       dividersV[left] = {
         left,
@@ -270,7 +246,7 @@ export class GanttChartTimeline {
       };
     }
 
-    for (let i = 0; i < vSecondaryAmount; i++) {
+    for (let i = 1; i < vSecondaryAmount; i++) {
       const left = i * this.TIME_UNIT_WIDTH;
       if (dividersV[left]) continue;
 
@@ -310,8 +286,7 @@ export class GanttChartTimeline {
   }
 
   getDateFromPosition(x) {
-    const rectLeft = this.el.getBoundingClientRect().left;
-    const delta = x - rectLeft + this.scrollLeft;
+    const delta = x + this.getScrollLeft();
 
     return this.getStartDate().add(
       delta / this.getPixelsPerSecond(),

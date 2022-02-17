@@ -58,13 +58,16 @@ export class Task {
 
   getWidthPx() {
     const width = this.getDuration() * this.getPixelsPerSecond();
-    const scrollWidth = this.timeline.scrollWidth;
+    const scrollWidth = this.timeline.getScrollWidth();
     const left = this.getLeftPx();
     return width + left > scrollWidth ? scrollWidth - left : width;
   }
 
   getLeftPx() {
-    return this.timeline.getPositionFromDate(moment.unix(this.start));
+    return (
+      this.timeline.getPositionFromDate(moment.unix(this.start)) -
+      this.timeline.getScrollLeft()
+    );
   }
 
   getTopPx() {
@@ -84,7 +87,9 @@ export class Task {
 
   isVisible() {
     const left = this.getLeftPx();
-    return left + this.getWidthPx() >= 0 && left <= this.timeline.scrollWidth;
+    return (
+      left + this.getWidthPx() >= 0 && left <= this.timeline.getScrollWidth()
+    );
   }
 
   /* -------------------------------------------------------------------------- */

@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <div class="gantt-chart-wrapper">
+    <div class="gantt-container">
       <div class="gantt-chart-controls">
         <span>
           <input type="checkbox" v-model="snapToGrid" id="snap-mode" />
@@ -22,7 +22,9 @@
           </select>
         </span>
       </div>
-      <GanttChart v-bind="{ chart }" />
+      <div class="gantt-chart-wrapper">
+        <GanttChart v-bind="{ chart }" />
+      </div>
       <pre
         v-if="verbose"
         class="gantt-chart-data"
@@ -121,17 +123,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
 
   position: relative;
+  width: 100%;
   height: 100%;
-  width: 100%;
-}
-
-.gantt-chart-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: fit-content;
-  width: 100%;
   padding: 20px;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.gantt-container {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .gantt-chart-controls {
@@ -139,14 +143,14 @@ body {
   justify-self: flex-start;
   align-items: center;
   gap: 30px;
-  margin-bottom: 20px;
+  flex: 0 0 50px;
+  padding-left: 10px;
 }
 
-.gantt-chart-data {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: auto;
+.gantt-chart-wrapper {
+  position: relative;
+  flex: 1 1 0%;
+  overflow: hidden;
 }
 
 button {

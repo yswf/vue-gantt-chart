@@ -1,5 +1,5 @@
 <template>
-  <div class="gantt-chart" @mousewheel="scale" :style="cssVars">
+  <div class="gantt-chart" @mousewheel="zoom" :style="cssVars">
     <Modal :modal="taskSpawnModal">
       <div class="modal-task-spawn">
         <input type="text" v-model="taskSpawnModal.taskName" />
@@ -13,85 +13,112 @@
         </div>
       </div>
     </Modal>
-    <div class="gantt-resources">
-      <div
-        v-for="resource in resources"
-        :key="resource.id"
-        class="gantt-resource"
-        :class="resource.classes"
-        :id="resource.id"
-        :style="{
-          height: `${resource.getHeightPx()}px`,
-        }"
-        v-text="resource.name"
-      ></div>
-      <div class="gantt-resource">
-        <button
-          style="width: 100%; height: 50px; border-radius: 0; border: none"
-          @click="chart.createResource({ name: 'New Resource' })"
+    <header class="gantt-header">
+      <div class="time-spacer"></div>
+      <div class="time-wrapper">
+        <div
+          class="time"
+          :style="{
+            transform: `translateX(-${timeline.getScrollLeft()}px)`,
+          }"
         >
-          +
-        </button>
-      </div>
-    </div>
-    <div
-      class="gantt-timeline"
-      :id="timeline.id"
-      @scroll="taskSpawnCancel"
-      @mousedown="taskSpawnStart"
-    >
-      <div class="time">
-        <div class="gantt-timeunits-primary">
-          <div
-            class="gantt-timeunit-primary"
-            :style="{
-              width: `${unit.width}px`,
-              transform: `translateX(${unit.left}px)`,
-            }"
-            v-for="unit in timelineData.primary"
-            :key="unit.name"
-            v-text="unit.name"
-          ></div>
+          <div class="gantt-timeunits-primary">
+            <div
+              class="gantt-timeunit-primary"
+              :style="{
+                width: `${unit.width}px`,
+                transform: `translateX(${unit.left}px)`,
+              }"
+              v-for="unit in timelineData.primary"
+              :key="unit.name"
+              v-text="unit.name"
+            ></div>
+          </div>
+          <div class="gantt-timeunits-secondary">
+            <div
+              class="gantt-timeunit-secondary"
+              v-for="(unit, index) in timelineData.secondary"
+              :key="`time-unit-${unit.name}-${index}`"
+              v-text="unit.name"
+            ></div>
+          </div>
         </div>
-        <div class="gantt-timeunits-secondary">
-          <div
-            class="gantt-timeunit-secondary"
-            v-for="(unit, index) in timelineData.secondary"
-            :key="`time-unit-${unit.name}-${index}`"
-            v-text="unit.name"
-          ></div>
+      </div>
+    </header>
+
+    <div class="gantt-workspace">
+      <div class="gantt-resources">
+        <div
+          v-for="resource in resources"
+          :key="resource.id"
+          class="gantt-resource"
+          :class="resource.classes"
+          :id="resource.id"
+          :style="{
+            height: `${resource.getHeightPx()}px`,
+          }"
+          v-text="resource.name"
+        ></div>
+        <div class="gantt-resource">
+          <button
+            style="width: 100%; height: 50px; border-radius: 0; border: none"
+            @click="chart.createResource({ name: 'New Resource' })"
+          >
+            +
+          </button>
         </div>
       </div>
 
-      <div class="gantt-timeline-dividers">
-        <div
-          class="divider-v"
-          :class="{ emphasize: divider.emphasize }"
-          v-for="divider in timelineData.dividersV"
-          :key="`dv-${divider.left}`"
-          :style="{
-            transform: `translateX(${divider.left}px)`,
-          }"
-        ></div>
-        <div
-          class="divider-h"
-          :class="{ emphasize: divider.emphasize }"
-          v-for="divider in timelineData.dividersH"
-          :key="`dh-${divider.top}`"
-          :style="{
-            width: `${timelineData.totalWidth}px`,
-            transform: `translateY(${divider.top}px)`,
-          }"
-        ></div>
-      </div>
-      <div class="tasks">
-        <Task
-          v-for="task in filteredTasks"
-          :key="`task-${task.id}`"
-          v-bind="{ task }"
-        />
+      <div
+        class="gantt-timeline"
+        :id="timeline.id"
+        @mousedown="taskSpawnStart"
+        :ref="timeline.id"
+      >
+        <div class="gantt-timeline-dividers">
+          <div
+            class="divider-v"
+            :class="{ emphasize: divider.emphasize }"
+            v-for="divider in timelineData.dividersV"
+            :key="`dv-${divider.left}`"
+            :style="{
+              transform: `translateX(${divider.left - timelineScrollLeft}px)`,
+            }"
+          ></div>
+          <div
+            class="divider-h"
+            :class="{ emphasize: divider.emphasize }"
+            v-for="divider in timelineData.dividersH"
+            :key="`dh-${divider.top}`"
+            :style="{
+              width: `${timelineData.totalWidth}px`,
+              transform: `translateY(${divider.top}px)`,
+            }"
+          ></div>
+        </div>
+        <div class="tasks">
+          <Task
+            v-for="task in filteredTasks"
+            :key="`task-${task.id}`"
+            v-bind="{ task }"
+          />
+        </div>
       </div>
     </div>
+    <footer class="gantt-chart-footer">
+      <div
+        class="virtual-scroll-wrapper"
+        @scroll="scroll"
+        @mousedown="toggleAnimations(false)"
+        @mouseup="toggleAnimations(true)"
+        ref="virtualScroll"
+      >
+        <div
+          class="virtual-scroll"
+          :style="{ width: `${timelineData.totalWidth}px`, height: '20px' }"
+        ></div>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -157,7 +184,12 @@ export default {
       return {
         "--gantt-time-unit-width": `${this.timeline.TIME_UNIT_WIDTH}px`,
         "--gantt-task-height": `${this.timeline.TASK_HEIGHT}px`,
+        "--gantt-resources-height": `${this.chart.getTotalResourcesHeight()}px`,
       };
+    },
+
+    timelineScrollLeft() {
+      return this.timeline.getScrollLeft();
     },
 
     timelineData() {
@@ -169,8 +201,12 @@ export default {
     },
   },
 
+  mounted() {
+    this.syncVirtualScroll();
+  },
+
   methods: {
-    scale(event) {
+    zoom(event) {
       if (!event.ctrlKey && !event.metaKey) return;
       event.preventDefault();
 
@@ -181,20 +217,53 @@ export default {
       } else {
         this.timeline.setTimePeriodOffset(-1);
       }
+
+      this.syncVirtualScroll();
+    },
+
+    scroll(event) {
+      this.timeline.scrollTo(event.target.scrollLeft);
+    },
+
+    syncVirtualScroll() {
+      const virtualScroll = this.$refs.virtualScroll;
+      virtualScroll.scrollLeft = this.timeline.getScrollLeft();
+    },
+
+    toggleAnimations(value) {
+      if (value == undefined) {
+        value = !this.chart.getSetting("tasksAnimations", true);
+      }
+
+      this.chart.setSettings({ tasksAnimations: Boolean(value) });
     },
 
     /* -------------------------------------------------------------------------- */
     /*                             task spawn handlers                            */
     /* -------------------------------------------------------------------------- */
 
+    getTimelineRef() {
+      const timeline = this.$refs[this.timeline.id];
+      if (!timeline) {
+        if (this.chart.getSetting("verbose", false)) {
+          console.warn(`No timeline found with id "${this.timeline.id}"`);
+        }
+        return null;
+      }
+      return timeline;
+    },
+
     //? Why use mousemove instead of mousedown/mouseup?
-    //? I used mousemove event to trigger task spawning
-    //? to prevent spawning tasks when scrolling the timeline.
-    //? This is what taskSpawnCancel() method does,
-    //? it is called on @scroll event of timeline,
-    //? and it cancels task spawning.
+    //? This approach improves UX by preventing
+    //? the user from accidentally creating a task
     taskSpawnStart(event) {
-      const startDate = this.timeline.getDateFromPosition(event.clientX);
+      const timeline = this.getTimelineRef();
+      if (!timeline) return;
+
+      const timelineRect = timeline.getBoundingClientRect();
+      const startDate = this.timeline.getDateFromPosition(
+        event.clientX - timelineRect.left
+      );
 
       this.taskSpawnData = {
         startX: event.clientX,
@@ -215,18 +284,22 @@ export default {
       const threshold = 20;
       if (Math.abs(diff) < threshold) return;
 
-      const startDate = this.timeline.getDateFromPosition(startX + diff);
+      const timeline = this.getTimelineRef();
+      if (!timeline) return;
+
+      const timelineRect = timeline.getBoundingClientRect();
+      const startDate = this.timeline.getDateFromPosition(
+        startX + diff - timelineRect.left
+      );
       const start = startDate.format(DEFAULT_DATE_FORMAT).toString();
       const end = startDate
         .add(1, "minute")
         .format(DEFAULT_DATE_FORMAT)
         .toString();
 
-      const top = this.timeline.getBoundingClientRect().top;
-
-      // FIXME 60px is hardcoded, it should be calculated from timeline dates height
       let y = Math.floor(
-        (this.taskSpawnData.startY - top - 60) / this.timeline.TASK_HEIGHT
+        (this.taskSpawnData.startY - timelineRect.top) /
+          this.timeline.TASK_HEIGHT
       );
       if (y < 0) y = 0;
       else if (y >= this.resources.length - 1) y = this.resources.length - 1;
@@ -299,12 +372,14 @@ export default {
 
 <style lang="scss" scoped>
 $timeunit-height: 30px;
-$timeline-dates-height: $timeunit-height * 2;
+$gantt-header-height: $timeunit-height * 2;
+$gantt-footer-height: 16.8px;
+$resource-bar-width: 220px;
 
 $divider-height: 1px;
 $divider-width: 1px;
-$divider-color: #f7f7f7;
-$divider-color-emphasis: #eee;
+$divider-color: #eee;
+$divider-color-emphasis: #ddd;
 
 .modal-task-spawn {
   display: flex;
@@ -325,56 +400,29 @@ $divider-color-emphasis: #eee;
 }
 
 .gantt-chart {
-  display: flex;
-  justify-content: center;
-}
-
-.gantt-resources {
-  padding-top: calc(#{$divider-height} + #{$timeline-dates-height});
-  width: 220px;
-  border: 1px solid #ccc;
-  margin-bottom: 18px;
-
-  .gantt-resource {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: var(--gantt-task-height);
-    transition: all 0.2s ease-in-out;
-
-    box-sizing: border-box;
-
-    &:first-child {
-      border-top: 1px solid #ccc;
-    }
-
-    &:not(:last-child) {
-      border-bottom: 1px solid #ccc;
-    }
-
-    &.task-target {
-      background-color: #d6d5d5;
-    }
-  }
-}
-
-.gantt-timeline {
   position: relative;
+  height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  overflow: auto;
-  border-top: 1px solid #ccc;
-  border-right: 1px solid #ccc;
+}
 
-  &::-webkit-scrollbar-thumb {
-    background-clip: content-box;
-    max-width: 10px;
+.gantt-header {
+  border: 1px solid #ccc;
+  position: relative;
+  display: flex;
+  flex: 0 0 $gantt-header-height;
+  box-sizing: border-box;
+
+  .time-spacer {
+    flex: 0 0 $resource-bar-width;
+    border-right: 1px solid #ccc;
+    box-sizing: border-box;
   }
 
-  .time {
-    height: $timeline-dates-height;
-    border-bottom: 1px solid #ccc;
+  .time-wrapper {
+    overflow: hidden;
+    position: relative;
   }
 
   .gantt-timeunits-primary {
@@ -390,6 +438,10 @@ $divider-color-emphasis: #eee;
       box-sizing: border-box;
       border-bottom: 1px solid #eee;
       user-select: none;
+
+      &:not(:last-child) {
+        border-right: 1px solid $divider-color;
+      }
     }
   }
 
@@ -400,7 +452,7 @@ $divider-color-emphasis: #eee;
     height: $timeunit-height;
 
     .gantt-timeunit-secondary {
-      width: var(--gantt-time-unit-width);
+      flex: 0 0 var(--gantt-time-unit-width);
       text-align: center;
       font-size: 0.8rem;
       color: #999;
@@ -410,16 +462,59 @@ $divider-color-emphasis: #eee;
       user-select: none;
 
       &:not(:last-child) {
-        border-right: 1px solid #eee;
+        border-right: 1px solid $divider-color;
       }
     }
   }
 }
 
+.gantt-workspace {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 0%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.gantt-resources {
+  flex: 0 0 $resource-bar-width;
+  height: fit-content;
+
+  .gantt-resource {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: var(--gantt-task-height);
+    transition: all 0.2s ease-in-out;
+    border-right: 1px solid #ccc;
+    border-left: 1px solid #ccc;
+    box-sizing: border-box;
+    border-bottom: 1px solid #ccc;
+
+    &.task-target {
+      background-color: #d6d5d5;
+    }
+  }
+}
+
+.gantt-timeline {
+  position: relative;
+  width: 100%;
+  height: var(--gantt-resources-height);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #ccc;
+}
+
 .gantt-timeline-dividers {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: var(--gantt-resources-height);
 
   .divider-v,
   .divider-h {
@@ -434,21 +529,12 @@ $divider-color-emphasis: #eee;
 
   .divider-v {
     width: $divider-width;
-    height: 100%;
-    top: $timeline-dates-height;
-
-    &.emphasize {
-      top: 0;
-    }
-
-    &:not(.emphasize) {
-      height: calc(100% - #{$timeline-dates-height});
-    }
+    height: 100vh;
+    top: 0;
   }
 
   .divider-h {
     left: 0;
-    top: $timeline-dates-height;
     height: $divider-height;
     width: 100%;
   }
@@ -457,7 +543,20 @@ $divider-color-emphasis: #eee;
 .tasks {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: var(--gantt-resources-height);
+}
+
+.gantt-chart-footer {
+  flex: 0 0 $gantt-footer-height;
+  position: relative;
+  padding-left: $resource-bar-width;
+
+  .virtual-scroll-wrapper {
+    position: relative;
+    height: $gantt-footer-height;
+    width: 100%;
+    overflow: auto;
+  }
 }
 
 input {
