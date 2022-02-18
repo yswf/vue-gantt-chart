@@ -64,10 +64,7 @@ export class Task {
   }
 
   getLeftPx() {
-    return (
-      this.timeline.getPositionFromDate(moment.unix(this.start)) -
-      this.timeline.getScrollLeft()
-    );
+    return this.timeline.getPositionFromDate(moment.unix(this.start));
   }
 
   getTopPx() {

@@ -16,12 +16,7 @@
     <header class="gantt-header">
       <div class="time-spacer"></div>
       <div class="time-wrapper">
-        <div
-          class="time"
-          :style="{
-            transform: `translateX(-${timeline.getScrollLeft()}px)`,
-          }"
-        >
+        <div class="time" :style="scrollRelativeStyle">
           <div class="gantt-timeunits-primary">
             <div
               class="gantt-timeunit-primary"
@@ -75,14 +70,14 @@
         @mousedown="taskSpawnStart"
         :ref="timeline.id"
       >
-        <div class="gantt-timeline-dividers">
+        <div class="gantt-timeline-dividers" :style="scrollRelativeStyle">
           <div
             class="divider-v"
             :class="{ emphasize: divider.emphasize }"
             v-for="divider in timelineData.dividersV"
             :key="`dv-${divider.left}`"
             :style="{
-              transform: `translateX(${divider.left - timelineScrollLeft}px)`,
+              transform: `translateX(${divider.left}px)`,
             }"
           ></div>
           <div
@@ -96,7 +91,7 @@
             }"
           ></div>
         </div>
-        <div class="tasks">
+        <div class="tasks" :style="scrollRelativeStyle">
           <Task
             v-for="task in filteredTasks"
             :key="`task-${task.id}`"
@@ -196,8 +191,19 @@ export default {
       return this.timeline.timePeriodData;
     },
 
+    timelineTotalWidth() {
+      return this.timeline.getScrollWidth();
+    },
+
     filteredTasks() {
       return this.tasks.filter((task) => task.isVisible());
+    },
+
+    scrollRelativeStyle() {
+      return {
+        width: `${this.timelineTotalWidth}px`,
+        transform: `translateX(-${this.timelineScrollLeft}px)`,
+      };
     },
   },
 
@@ -520,7 +526,6 @@ $divider-color-emphasis: #ddd;
   .divider-h {
     position: absolute;
     background-color: $divider-color;
-    z-index: -1;
 
     &.emphasize {
       background-color: $divider-color-emphasis;
