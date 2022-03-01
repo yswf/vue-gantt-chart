@@ -327,7 +327,7 @@ export default {
     },
 
     taskSpawnEnd() {
-      window.removeEventListener("mousemove", this.taskSpawn);
+      document.removeEventListener("mousemove", this.taskSpawn);
       if (this.taskSpawnData?.firstCall) this.taskSpawnCancel();
     },
 
